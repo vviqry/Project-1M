@@ -2,9 +2,10 @@
   "name": "project-1m",
   "version": "1.0.0",
   "description": "Project 1M Quest Tracker",
+  "type": "module",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "node build.js",
     "preview": "vite preview"
   },
   "devDependencies": {
