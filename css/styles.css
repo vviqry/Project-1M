@@ -1,0 +1,404 @@
+/* ==========================================================================
+   Project 1M Quest Tracker - Core Stylesheet
+   Crafted with Tactile Financial Elegance, Rich Typography & Dynamic Theming
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;0,900;1,600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
+
+:root {
+  /* Default: Sovereign Path (Cream / Emerald) */
+  --surface: #f4fbf2;
+  --surface-bright: #f4fbf2;
+  --surface-dim: #d5dcd3;
+  --surface-container-lowest: #ffffff;
+  --surface-container-low: #eef6ec;
+  --surface-container: #e9f0e6;
+  --surface-container-high: #e3eae1;
+  --surface-container-highest: #dde5db;
+  --surface-variant: #dde5db;
+  --on-surface: #161d18;
+  --on-surface-variant: #424842;
+  --inverse-surface: #2b322c;
+  --inverse-on-surface: #ebf3e9;
+  
+  --primary: #1c3e25;
+  --primary-container: #33553a;
+  --on-primary: #ffffff;
+  --on-primary-container: #a2c8a6;
+  --primary-fixed: #c5ecc8;
+  --primary-fixed-dim: #aad0ad;
+  --on-primary-fixed: #00210b;
+  
+  --secondary: #7c5800;
+  --secondary-container: #fec659;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #735200;
+  --secondary-fixed: #ffdea7;
+  --secondary-fixed-dim: #f5be52;
+  --on-secondary-fixed: #271900;
+  
+  --tertiary: #651f02;
+  --tertiary-container: #833516;
+  --on-tertiary: #ffffff;
+  --on-tertiary-container: #ffa98b;
+  
+  --outline: #727971;
+  --outline-variant: #c2c8bf;
+  --error: #ba1a1a;
+  --error-container: #ffdad6;
+  --on-error: #ffffff;
+
+  --path-solid: #33553a;
+  --path-dotted: #c2c8bf;
+  --theme-bar: #1c3e25;
+
+  /* Font Families */
+  --font-serif: 'Playfair Display', Georgia, serif;
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  
+  /* Max width for mobile-first PWA container */
+  --max-width-pwa: 448px;
+}
+
+/* Base Styles */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  background-color: var(--surface);
+  color: var(--on-surface);
+  font-family: var(--font-sans);
+  min-height: 100vh;
+  width: 100%;
+  overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Safe Area Insets for Mobile PWA */
+.pt-safe {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+.pb-safe {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+/* Typography Utilities */
+.font-playfair {
+  font-family: var(--font-serif);
+}
+.font-jakarta {
+  font-family: var(--font-sans);
+}
+
+.font-numeral-hero {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 40px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.font-headline-lg {
+  font-family: var(--font-serif);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 34px;
+  letter-spacing: -0.01em;
+}
+
+.font-headline-sm {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 28px;
+}
+
+.font-title-lg {
+  font-family: var(--font-sans);
+  font-size: 18px;
+  font-weight: 700;
+  line-height: 24px;
+}
+
+.font-title-md {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 22px;
+}
+
+.font-body-lg {
+  font-family: var(--font-sans);
+  font-size: 16px;
+  font-weight: 400;
+  line-height: 24px;
+}
+
+.font-body-md {
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+}
+
+.font-body-sm {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 16px;
+}
+
+.font-label-md {
+  font-family: var(--font-sans);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  letter-spacing: 0.04em;
+}
+
+.font-label-sm {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 14px;
+  letter-spacing: 0.06em;
+}
+
+/* Material Symbols */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  text-transform: none;
+  letter-spacing: normal;
+  word-wrap: normal;
+  white-space: nowrap;
+  direction: ltr;
+  vertical-align: middle;
+}
+
+/* PWA App Shell Constraints */
+.app-container {
+  width: 100%;
+  max-width: var(--max-width-pwa);
+  margin: 0 auto;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-col: column;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.06);
+  background-color: var(--surface);
+  transition: background-color 0.3s ease;
+}
+
+/* Tactile Buttons */
+.btn-tactile {
+  border-radius: 9999px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  outline: none;
+}
+.btn-tactile:active {
+  transform: translateY(2px);
+}
+
+.btn-primary-tactile {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.2);
+}
+.btn-primary-tactile:active {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15), 0 2px 4px -2px rgba(0, 0, 0, 0.2);
+}
+
+.btn-secondary-tactile {
+  background-color: var(--secondary-container);
+  color: var(--on-secondary-container);
+  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.1);
+}
+.btn-secondary-tactile:active {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
+}
+
+.btn-error-tactile {
+  background-color: var(--error);
+  color: var(--on-error);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.15), 0 8px 16px -4px rgba(186, 26, 26, 0.3);
+}
+.btn-error-tactile:active {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.15), 0 2px 4px -2px rgba(186, 26, 26, 0.3);
+}
+
+/* Pulsing & Glowing Elements */
+@keyframes goldPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(254, 198, 89, 0.6);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 14px rgba(254, 198, 89, 0);
+  }
+}
+.animate-active-node {
+  animation: goldPulse 2.8s infinite ease-in-out;
+}
+
+@keyframes subtleFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.animate-float {
+  animation: subtleFloat 3s infinite ease-in-out;
+}
+
+/* Modals & Bottom Sheets */
+.bottom-sheet-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.bottom-sheet-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bottom-sheet-panel {
+  width: 100%;
+  max-width: var(--max-width-pwa);
+  background-color: var(--surface-container-lowest);
+  border-top-left-radius: 2rem;
+  border-top-right-radius: 2rem;
+  box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.2);
+  transform: translateY(100%);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-height: 90vh;
+  overflow-y: auto;
+  border-top: 1px solid var(--outline-variant);
+}
+
+.bottom-sheet-backdrop.active .bottom-sheet-panel {
+  transform: translateY(0);
+}
+
+/* Drag Pill Handle */
+.drag-handle {
+  width: 44px;
+  height: 5px;
+  background-color: var(--outline-variant);
+  border-radius: 9999px;
+  margin: 12px auto 6px;
+}
+
+/* Centered Dialog Modals */
+.dialog-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.dialog-modal-backdrop.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.dialog-modal-content {
+  width: 100%;
+  max-width: 380px;
+  background-color: var(--surface-container-lowest);
+  border-radius: 1.75rem;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  transform: scale(0.92);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  padding: 1.5rem;
+  border: 1px solid var(--outline-variant);
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.dialog-modal-backdrop.active .dialog-modal-content {
+  transform: scale(1);
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--outline-variant);
+  border-radius: 9999px;
+}
+
+/* Theme Option Card */
+.theme-card-btn {
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+.theme-card-btn:hover {
+  transform: translateY(-2px);
+}
+.theme-card-btn.active-theme {
+  border-color: var(--primary) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* Sinusoidal Path System */
+.path-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.path-svg path {
+  transition: stroke 0.3s ease;
+}
+
+/* Confetti Container */
+#confetti-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+  overflow: hidden;
+}

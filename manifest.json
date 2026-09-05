@@ -1,0 +1,18 @@
+{
+  "name": "Project 1M Quest Tracker",
+  "short_name": "Project 1M",
+  "description": "Peta petualangan gamifikasi finansial menuju milestone Rp 1 Juta dan ekspansi level tak terbatas.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f4fbf2",
+  "theme_color": "#1c3e25",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
