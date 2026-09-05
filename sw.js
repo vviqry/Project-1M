@@ -1,8 +1,9 @@
-const CACHE_NAME = 'p1m-quest-tracker-v2';
+const CACHE_NAME = 'p1m-quest-tracker-v3';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './css/styles.css',
+  './js/firebase-config.js',
   './js/themes.js',
   './js/store.js',
   './js/app.js',

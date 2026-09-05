@@ -156,6 +156,80 @@
           console.log('SW registration skipped:', err);
         });
       }
+
+      // 14. Setup Firebase Cloud Sync UI & Event Listeners
+      this.initCloudSyncUI();
+
+      window.addEventListener('p1m-cloud-synced', () => {
+        this.refreshAll();
+      });
+    }
+
+    refreshAll() {
+      this.updateBanner();
+      this.renderRoadmap();
+      this.renderTasHartaList();
+      if (this.activeTab === 'statistik') this.renderStatisticsTab();
+      if (this.activeTab === 'kantong-tabungan') this.renderKantongTab();
+      if (this.currentOpenLevelId) {
+        this.populateUniversalSheet(this.currentOpenLevelId);
+      }
+    }
+
+    initCloudSyncUI() {
+      const btn = document.getElementById('cloudSyncBtn');
+      const icon = document.getElementById('cloudStatusIcon');
+      const dot = document.getElementById('cloudStatusDot');
+      if (!btn) return;
+
+      const updateUI = (status, label) => {
+        if (!icon || !dot) return;
+        if (status === 'synced') {
+          icon.textContent = 'cloud_done';
+          icon.className = 'material-symbols-outlined text-[20px] text-emerald-500';
+          dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface';
+          btn.title = 'Firebase Cloud: Data Tersinkron Permanen (Klik untuk info)';
+        } else if (status === 'syncing') {
+          icon.textContent = 'sync';
+          icon.className = 'material-symbols-outlined text-[20px] text-amber-500 animate-spin';
+          dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-surface animate-ping';
+          btn.title = 'Firebase Cloud: Sedang Menyimpan Data...';
+        } else if (status === 'offline') {
+          icon.textContent = 'cloud_off';
+          icon.className = 'material-symbols-outlined text-[20px] text-zinc-400';
+          dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-zinc-400 ring-2 ring-surface';
+          btn.title = 'Firebase Cloud: Mode Offline (Data tersimpan aman di browser)';
+        } else if (status === 'error') {
+          icon.textContent = 'cloud_off';
+          icon.className = 'material-symbols-outlined text-[20px] text-rose-500';
+          dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-surface';
+          btn.title = 'Firebase Cloud: Gagal Terhubung ke Database';
+        }
+      };
+
+      // Listen for status events from FirebaseSyncService
+      window.addEventListener('p1m-cloud-status', (e) => {
+        const { status, label } = e.detail || {};
+        updateUI(status, label);
+      });
+
+      // Immediate check in case service already initialized
+      if (window.FirebaseSync) {
+        updateUI(window.FirebaseSync.status);
+      }
+
+      btn.addEventListener('click', () => {
+        const syncStatus = window.FirebaseSync ? window.FirebaseSync.status : 'unknown';
+        if (syncStatus === 'synced') {
+          showToast('☁️ Data abadi & tersinkron di Firebase Cloud!', 'cloud_done');
+        } else if (syncStatus === 'syncing') {
+          showToast('Sedang menyimpan ke cloud Firebase...', 'sync');
+        } else if (syncStatus === 'offline') {
+          showToast('Mode offline. Data tetap tersimpan aman di perangkat lokal.', 'cloud_off');
+        } else {
+          showToast('Menghubungkan ke Firebase Cloud...', 'cloud');
+        }
+      });
     }
 
     // --- Top Banner & Header HUD ---

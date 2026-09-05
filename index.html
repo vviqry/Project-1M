@@ -123,8 +123,13 @@
           </div>
         </div>
 
-        <!-- Right: Action Buttons (Tas Harta, Tema, Info) -->
+        <!-- Right: Action Buttons (Cloud Sync, Tas Harta, Tema, Info) -->
         <div class="flex items-center gap-1.5">
+          <button id="cloudSyncBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-all bg-surface-container/70 hover:bg-surface-container relative shadow-xs" title="Firebase Cloud: Status Sinkronisasi">
+            <span class="material-symbols-outlined text-[20px]" id="cloudStatusIcon">cloud_done</span>
+            <span id="cloudStatusDot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface animate-pulse"></span>
+          </button>
+
           <button id="tasHartaBtn" class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container hover:bg-secondary-container text-secondary hover:text-on-secondary-container active:scale-95 transition-all relative shadow-xs" title="Tas Harta (Inventaris Mesin Uang)">
             <span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">work</span>
             <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-secondary ring-2 ring-surface"></span>
@@ -771,6 +776,11 @@
       </button>
     </div>
   </div>
+
+  <!-- Firebase SDK & Config -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+  <script src="js/firebase-config.js"></script>
 
   <!-- Application Logic Scripts -->
   <script src="js/themes.js"></script>

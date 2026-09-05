@@ -133,6 +133,78 @@ class StoreManager {
     };
 
     this.loadData();
+    this.initCloudSync();
+  }
+
+  initCloudSync() {
+    const connect = () => {
+      if (typeof window !== 'undefined' && window.FirebaseSync) {
+        window.FirebaseSync.listenToCloud((cloudData) => {
+          if (cloudData && (cloudData.levels || cloudData.transactions)) {
+            this.importCloudData(cloudData);
+          } else {
+            console.log('[Store] Cloud kosong, mengunggah data lokal awal ke Firebase...');
+            window.FirebaseSync.saveToCloud(this.exportData(), true);
+          }
+        });
+      }
+    };
+
+    if (typeof window !== 'undefined' && window.FirebaseSync) {
+      connect();
+    } else if (typeof window !== 'undefined') {
+      window.addEventListener('DOMContentLoaded', connect);
+    }
+  }
+
+  exportData() {
+    return {
+      levels: this.levels,
+      dynamicLevels: this.dynamicLevels,
+      assets: this.assets,
+      transactions: this.transactions,
+      apexTarget: this.apexTarget
+    };
+  }
+
+  importCloudData(cloudData) {
+    if (!cloudData) return;
+
+    if (cloudData.levels && typeof cloudData.levels === 'object') {
+      this.levels = cloudData.levels;
+      Object.keys(DEFAULT_LEVELS).forEach((k) => {
+        if (!this.levels[k]) {
+          this.levels[k] = JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));
+        }
+      });
+      localStorage.setItem(this.STORAGE_KEYS.LEVELS, JSON.stringify(this.levels));
+    }
+
+    if (Array.isArray(cloudData.dynamicLevels)) {
+      this.dynamicLevels = cloudData.dynamicLevels;
+      localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
+    }
+
+    if (Array.isArray(cloudData.assets)) {
+      this.assets = cloudData.assets;
+      localStorage.setItem(this.STORAGE_KEYS.ASSETS, JSON.stringify(this.assets));
+    }
+
+    if (Array.isArray(cloudData.transactions)) {
+      this.transactions = cloudData.transactions;
+      localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
+    }
+
+    if (cloudData.apexTarget !== undefined) {
+      this.apexTarget = Number(cloudData.apexTarget);
+      localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
+    } else {
+      this.recalculateApex();
+    }
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('p1m-cloud-synced', { detail: { source: 'remote' } }));
+    }
   }
 
   loadData() {
@@ -241,12 +313,16 @@ class StoreManager {
     this.apexTarget = base;
   }
 
-  save() {
+  save(skipCloud = false) {
     localStorage.setItem(this.STORAGE_KEYS.LEVELS, JSON.stringify(this.levels));
     localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
     localStorage.setItem(this.STORAGE_KEYS.ASSETS, JSON.stringify(this.assets));
     localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
     localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
+
+    if (!skipCloud && typeof window !== 'undefined' && window.FirebaseSync) {
+      window.FirebaseSync.saveToCloud(this.exportData());
+    }
   }
 
   getLevel(id) {
@@ -514,6 +590,9 @@ class StoreManager {
     localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
     this.loadData();
+    if (typeof window !== 'undefined' && window.FirebaseSync) {
+      window.FirebaseSync.saveToCloud(this.exportData(), true);
+    }
   }
 }
 
