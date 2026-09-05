@@ -95,6 +95,16 @@
     }
   }
 
+  /**
+   * Auto-grow textarea: resets height to auto, then sets it to scrollHeight.
+   * Call on 'input' event and after programmatic value set.
+   */
+  function autoGrowTextarea(el) {
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
   // --- Main Application Controller ---
   class AppController {
     constructor() {
@@ -753,6 +763,12 @@
         });
       }
 
+      // Auto-grow guide textarea on input
+      const guideTextarea = document.getElementById('levelGuideText');
+      if (guideTextarea) {
+        guideTextarea.addEventListener('input', () => autoGrowTextarea(guideTextarea));
+      }
+
       // Mode toggle buttons (+ / -)
       if (modeAddBtn) modeAddBtn.addEventListener('click', () => this.setDepositMode('add'));
       if (modeSubBtn) modeSubBtn.addEventListener('click', () => this.setDepositMode('subtract'));
@@ -890,7 +906,11 @@
         }
       }
 
-      if (guideText) guideText.value = level.guide || '';
+      if (guideText) {
+        guideText.value = level.guide || '';
+        // Trigger auto-grow after setting value
+        autoGrowTextarea(guideText);
+      }
 
       const target = Number(level.target) || 1;
       const collected = Number(level.collected) || 0;

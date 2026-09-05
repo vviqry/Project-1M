@@ -129,31 +129,62 @@ class StoreManager {
       DYNAMIC_LEVELS: 'p1m_dynamic_levels_v3',
       ASSETS: 'p1m_assets_data_v3',
       TRANSACTIONS: 'p1m_transactions_v3',
-      APEX_TARGET: 'p1m_apex_target_v3'
+      APEX_TARGET: 'p1m_apex_target_v3',
+      DATA_CLEAN_VERSION: 'p1m_data_clean_v1'
     };
+
+    // One-time data cleanup: purge contaminated data from old unsecured Firebase sync
+    this.purgeContaminatedDataOnce();
 
     this.loadData();
     this.initCloudSync();
   }
 
+  /**
+   * One-time cleanup to remove data contaminated by unsecured Firebase.
+   * Only runs ONCE (tracked by p1m_data_clean_v1 key).
+   * After running, data resets to clean DEFAULT_LEVELS.
+   */
+  purgeContaminatedDataOnce() {
+    const alreadyCleaned = localStorage.getItem(this.STORAGE_KEYS.DATA_CLEAN_VERSION);
+    if (alreadyCleaned) return; // Already cleaned, skip
+
+    console.warn('[Store] Membersihkan data terkontaminasi dari sync Firebase lama...');
+    localStorage.removeItem(this.STORAGE_KEYS.LEVELS);
+    localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_LEVELS);
+    localStorage.removeItem(this.STORAGE_KEYS.ASSETS);
+    localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
+    localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
+    localStorage.setItem(this.STORAGE_KEYS.DATA_CLEAN_VERSION, Date.now().toString());
+    console.log('[Store] Data berhasil dibersihkan. Akan dimuat ulang dari DEFAULT_LEVELS.');
+  }
+
   initCloudSync() {
+    // Cloud sync is controlled by the CLOUD_SYNC_ENABLED flag in firebase-config.js.
+    // The FirebaseSync service will only function when enabled AND authenticated.
     const connect = () => {
-      if (typeof window !== 'undefined' && window.FirebaseSync) {
-        window.FirebaseSync.listenToCloud((cloudData) => {
-          if (cloudData && (cloudData.levels || cloudData.transactions)) {
-            this.importCloudData(cloudData);
-          } else {
-            console.log('[Store] Cloud kosong, mengunggah data lokal awal ke Firebase...');
-            window.FirebaseSync.saveToCloud(this.exportData(), true);
-          }
+      if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
+        window.FirebaseSync.onAuthReady((uid) => {
+          console.log('[Store] Firebase Auth siap untuk UID:', uid);
+          window.FirebaseSync.listenToCloud((cloudData) => {
+            if (cloudData && (cloudData.levels || cloudData.transactions)) {
+              console.log('[Store] Data cloud ditemukan untuk UID:', uid);
+              this.importCloudData(cloudData);
+            } else {
+              console.log('[Store] Cloud kosong untuk UID ini. Mengunggah data lokal awal ke Firebase...');
+              window.FirebaseSync.saveToCloud(this.exportData(), true);
+            }
+          });
         });
       }
     };
 
-    if (typeof window !== 'undefined' && window.FirebaseSync) {
-      connect();
-    } else if (typeof window !== 'undefined') {
-      window.addEventListener('DOMContentLoaded', connect);
+    if (typeof window !== 'undefined') {
+      if (window.FirebaseSync && window.FirebaseSync.enabled) {
+        connect();
+      } else {
+        window.addEventListener('DOMContentLoaded', connect);
+      }
     }
   }
 
@@ -320,7 +351,7 @@ class StoreManager {
     localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
     localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
 
-    if (!skipCloud && typeof window !== 'undefined' && window.FirebaseSync) {
+    if (!skipCloud && typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
       window.FirebaseSync.saveToCloud(this.exportData());
     }
   }
@@ -590,7 +621,7 @@ class StoreManager {
     localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
     this.loadData();
-    if (typeof window !== 'undefined' && window.FirebaseSync) {
+    if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
       window.FirebaseSync.saveToCloud(this.exportData(), true);
     }
   }

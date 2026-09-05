@@ -434,7 +434,7 @@
             <span class="material-symbols-outlined text-[13px]">save</span> Simpan
           </button>
         </div>
-        <textarea id="levelGuideText" rows="3" class="w-full text-xs font-body-sm text-on-surface bg-surface-container-lowest p-2.5 rounded-xl outline-none border border-outline-variant/50 resize-none focus:border-secondary transition-colors leading-relaxed" placeholder="Tulis instruksi atau strategi eksekusi level ini..."></textarea>
+        <textarea id="levelGuideText" rows="2" class="w-full text-xs font-body-sm text-on-surface bg-surface-container-lowest p-2.5 rounded-xl outline-none border border-outline-variant/50 resize-none focus:border-secondary transition-colors leading-relaxed overflow-hidden" style="min-height:3rem;" placeholder="Tulis instruksi atau strategi eksekusi level ini..."></textarea>
         <div class="flex justify-between items-center text-[10px] text-on-surface-variant">
           <span class="text-primary font-semibold">In-place Editable (Tersimpan otomatis)</span>
           <span class="text-secondary font-bold">Quest Guide</span>
@@ -779,6 +779,7 @@
 
   <!-- Firebase SDK & Config -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
   <script src="js/firebase-config.js"></script>
 
