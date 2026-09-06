@@ -598,29 +598,10 @@ class StoreManager {
   }
 
   /**
-   * Check if there are main levels that don't yet have a side quest attached.
-   * Returns true if at least 1 main level has an empty side quest slot.
+   * Get all main levels (base levels + dynamic levels) that don't have a side quest yet.
+   * Returns array of level objects: [{ id, title, target, ... }]
    */
-  hasAvailableSideQuestSlot() {
-    // Gather all main levels (base ordered levels + dynamic levels, excluding apex and sidequest itself)
-    const mainLevels = [];
-
-    // Base levels (level1-level4)
-    ['level1', 'level2', 'level3', 'level4'].forEach(key => {
-      const lvl = this.levels[key];
-      if (lvl && !lvl.deleted && !lvl.isSideQuest && !lvl.isApex) {
-        mainLevels.push(lvl.id);
-      }
-    });
-
-    // Dynamic levels
-    this.dynamicLevels.forEach(dl => {
-      if (!dl.deleted) {
-        mainLevels.push(dl.id);
-      }
-    });
-
-    // Collect all parent level IDs that already have a side quest
+  getAvailableSideQuestParents() {
     const occupiedSlots = new Set();
 
     // The hardcoded sidequest is attached to level3
@@ -635,8 +616,34 @@ class StoreManager {
       }
     });
 
-    // Check if any main level is NOT in occupiedSlots
-    return mainLevels.some(id => !occupiedSlots.has(id));
+    const available = [];
+
+    // Base levels (order 1-4)
+    const baseKeys = ['level1', 'level2', 'level3', 'level4'];
+    for (const key of baseKeys) {
+      const lvl = this.levels[key];
+      if (lvl && !lvl.deleted && !lvl.isSideQuest && !lvl.isApex && !occupiedSlots.has(lvl.id)) {
+        available.push(lvl);
+      }
+    }
+
+    // Dynamic levels (sorted by order)
+    const sortedDynamic = [...this.dynamicLevels].filter(dl => !dl.deleted).sort((a, b) => (a.order || 0) - (b.order || 0));
+    for (const dl of sortedDynamic) {
+      if (!occupiedSlots.has(dl.id)) {
+        available.push(dl);
+      }
+    }
+
+    return available;
+  }
+
+  /**
+   * Check if there are main levels that don't yet have a side quest attached.
+   * Returns true if at least 1 main level has an empty side quest slot.
+   */
+  hasAvailableSideQuestSlot() {
+    return this.getAvailableSideQuestParents().length > 0;
   }
 
   /**
@@ -644,43 +651,27 @@ class StoreManager {
    * Returns the level object or null.
    */
   getFirstAvailableSideQuestParent() {
-    const occupiedSlots = new Set();
-
-    if (this.levels.sidequest && !this.levels.sidequest.deleted) {
-      occupiedSlots.add('level3');
-    }
-    this.dynamicSideQuests.forEach(sq => {
-      if (!sq.deleted && sq.parentLevelId) {
-        occupiedSlots.add(sq.parentLevelId);
-      }
-    });
-
-    // Check base levels first (order 1-4)
-    const baseKeys = ['level1', 'level2', 'level3', 'level4'];
-    for (const key of baseKeys) {
-      const lvl = this.levels[key];
-      if (lvl && !lvl.deleted && !lvl.isSideQuest && !lvl.isApex && !occupiedSlots.has(lvl.id)) {
-        return lvl;
-      }
-    }
-
-    // Then check dynamic levels (sorted by order)
-    const sortedDynamic = [...this.dynamicLevels].filter(dl => !dl.deleted).sort((a, b) => (a.order || 0) - (b.order || 0));
-    for (const dl of sortedDynamic) {
-      if (!occupiedSlots.has(dl.id)) {
-        return dl;
-      }
-    }
-
-    return null;
+    const list = this.getAvailableSideQuestParents();
+    return list.length > 0 ? list[0] : null;
   }
 
   /**
-   * Add a new dynamic side quest attached to the first available main level.
+   * Add a new dynamic side quest attached to a selected main level (or first available).
    */
   addDynamicSideQuest(data) {
-    const parent = this.getFirstAvailableSideQuestParent();
-    if (!parent) return { success: false, error: 'Semua level utama sudah memiliki side quest.' };
+    const available = this.getAvailableSideQuestParents();
+    if (available.length === 0) {
+      return { success: false, error: 'Semua level utama sudah memiliki side quest.' };
+    }
+
+    // Find requested parent, or default to the first available
+    let parent = null;
+    if (data.parentLevelId) {
+      parent = available.find(p => p.id === data.parentLevelId);
+    }
+    if (!parent) {
+      parent = available[0];
+    }
 
     const sqId = 'sidequest_' + Date.now();
     const targetSQ = Number(data.target) || 100000;

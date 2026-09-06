@@ -1313,12 +1313,7 @@
           if (addSideQuestBtn.disabled) return;
           if (sideQuestFormPanel) {
             sideQuestFormPanel.classList.remove('hidden');
-            // Show which parent level will receive the side quest
-            const parent = window.AppStore.getFirstAvailableSideQuestParent();
-            const infoEl = document.getElementById('sideQuestParentInfo');
-            if (infoEl && parent) {
-              infoEl.textContent = `Side quest ini akan ditautkan ke "${parent.title}" yang belum memiliki side quest.`;
-            }
+            this.populateSideQuestParentSelect();
           }
         });
       }
@@ -1335,9 +1330,11 @@
         confirmSideQuestBtn.addEventListener('click', () => {
           const nameInput = document.getElementById('newSideQuestNameInput');
           const targetInput = document.getElementById('newSideQuestTargetInput');
+          const parentSelect = document.getElementById('sideQuestParentSelect');
 
           const name = nameInput ? nameInput.value.trim() : '';
           const target = targetInput ? Number(targetInput.value) : 100000;
+          const selectedParentId = parentSelect ? parentSelect.value : null;
 
           if (!name) {
             showToast('Beri nama untuk side quest baru!', 'warning');
@@ -1347,6 +1344,7 @@
           const res = window.AppStore.addDynamicSideQuest({
             name,
             target,
+            parentLevelId: selectedParentId,
             emoji: this.selectedSQEmoji,
             icon: this.selectedSQIcon,
             guide: `Selesaikan side quest "${name}" dengan target ${formatRp(target)} untuk bonus pencapaian!`
@@ -1399,6 +1397,37 @@
     }
 
     /**
+     * Populate the parent level dropdown with all main levels that don't have a side quest yet.
+     */
+    populateSideQuestParentSelect() {
+      const select = document.getElementById('sideQuestParentSelect');
+      if (!select) return;
+
+      const availableParents = window.AppStore.getAvailableSideQuestParents();
+      select.innerHTML = '';
+
+      if (availableParents.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'Tidak ada slot level kosong';
+        select.appendChild(opt);
+        select.disabled = true;
+        return;
+      }
+
+      select.disabled = false;
+      availableParents.forEach((parent, index) => {
+        const opt = document.createElement('option');
+        opt.value = parent.id;
+        opt.textContent = `${parent.title} (${formatRp(parent.target)})`;
+        if (index === 0) {
+          opt.selected = true;
+        }
+        select.appendChild(opt);
+      });
+    }
+
+    /**
      * Update the enabled/disabled state of the "+ Tambah Side Quest" button
      * based on whether there are available side quest slots.
      */
@@ -1429,8 +1458,9 @@
       const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
       if (sideQuestFormPanel) sideQuestFormPanel.classList.add('hidden');
 
-      // Update side quest button state
+      // Update side quest button state & populate dropdown
       this.updateSideQuestBtnState();
+      this.populateSideQuestParentSelect();
 
       const backdrop = document.getElementById('addLevelModalBackdrop');
       if (backdrop) {

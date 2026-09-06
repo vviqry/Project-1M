@@ -759,9 +759,16 @@
           <div class="w-6 h-6 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center text-sm">⚡</div>
           <h4 class="font-title-md text-sm text-on-surface font-bold">Buat Side Quest Baru</h4>
         </div>
-        <p class="font-body-sm text-[11px] text-on-surface-variant leading-relaxed" id="sideQuestParentInfo">
-          Side quest akan ditautkan ke level utama pertama yang belum memiliki side quest.
-        </p>
+        <div>
+          <label for="sideQuestParentSelect" class="block font-label-sm text-[11px] text-on-surface font-bold mb-1">Tautkan ke Level Utama</label>
+          <div class="relative">
+            <select id="sideQuestParentSelect" class="w-full h-10 pl-3 pr-9 rounded-xl bg-surface-container text-xs text-on-surface outline-none border border-outline-variant/50 focus:border-secondary font-semibold appearance-none cursor-pointer">
+              <!-- Options populated dynamically from store -->
+            </select>
+            <span class="material-symbols-outlined text-[20px] text-on-surface-variant absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none">arrow_drop_down</span>
+          </div>
+          <p class="font-body-sm text-[10px] text-on-surface-variant mt-1 leading-tight">Hanya menampilkan level yang belum memiliki side quest.</p>
+        </div>
         <div>
           <label class="block font-label-sm text-[11px] text-on-surface font-bold mb-1">Nama Side Quest</label>
           <input type="text" id="newSideQuestNameInput" value="Bonus Challenge" placeholder="Contoh: Bonus Challenge" class="w-full h-10 px-3 rounded-xl bg-surface-container text-xs text-on-surface outline-none border border-outline-variant/50 focus:border-secondary font-semibold"/>
