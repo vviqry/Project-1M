@@ -337,11 +337,10 @@
         dynamicLevels.forEach((dLevel, index) => {
           if (dLevel.deleted) return;
           const isLeft = index % 2 === 0;
-          const nodeCard = document.createElement('div');
-          nodeCard.id = `dynamicNode_${dLevel.id}`;
-          nodeCard.className = `relative z-10 w-full flex ${isLeft ? 'justify-start pl-8' : 'justify-end pr-8'} mb-8 animate-float`;
-          
           const status = statusMap[dLevel.id] || 'locked';
+
+          // Check if this dynamic level has an attached side quest
+          const attachedSQ = store.dynamicSideQuests.find(sq => sq.parentLevelId === dLevel.id && !sq.deleted);
 
           let iconHtml = '';
           let badgeHtml = '';
@@ -385,20 +384,70 @@
             </div>
           ` : '';
 
-          nodeCard.innerHTML = `
-            <div class="flex flex-col items-center max-w-[170px] text-center cursor-pointer active:scale-95 transition-transform" onclick="window.App.openLevel('${dLevel.id}')">
-              ${activeBadgeHtml}
-              <div class="${circleClass}">
-                ${iconHtml}
+          // Build side quest HTML if attached
+          let sideQuestHtml = '';
+          if (attachedSQ) {
+            sideQuestHtml = `
+              <div class="flex-1 flex ${isLeft ? 'justify-end' : 'justify-start'} items-center relative">
+                <!-- Connector dotted bridge -->
+                <div class="flex-grow border-t-2 border-dashed border-[var(--outline-variant)] mx-2 h-0"></div>
+                <div class="flex flex-col items-center max-w-[125px] text-center cursor-pointer group active:scale-95 transition-transform relative" onclick="window.App.openLevel('${attachedSQ.id}')">
+                  <div class="w-12 h-12 rounded-full bg-[var(--surface-container-highest)] border-2 border-[var(--secondary-container)] text-[var(--secondary)] flex items-center justify-center shadow-sm relative overflow-hidden node-icon-wrapper">
+                    <span class="material-symbols-outlined text-[22px] node-icon">${attachedSQ.icon || 'flash_on'}</span>
+                    <span class="absolute -top-1 -right-1 text-[12px]">${attachedSQ.emoji || '⚡'}</span>
+                  </div>
+                  <span class="px-1.5 py-0.5 rounded-full bg-[var(--secondary-container)] text-[var(--on-secondary-container)] font-label-sm text-[9px] font-bold uppercase mt-1 tracking-wider">Side Quest</span>
+                  <span class="font-label-sm text-[11px] text-[var(--on-surface)] font-bold leading-tight mt-0.5 node-title">${attachedSQ.title.replace('Side Quest: ', '')}</span>
+                  <span class="font-label-sm text-[10px] text-[var(--secondary)] font-semibold mt-0.5 node-amount">${formatRp(attachedSQ.collected)} / ${formatRp(attachedSQ.target)}</span>
+                </div>
               </div>
-              <span class="font-title-md text-[var(--on-surface)] font-bold mt-1.5 leading-tight node-title">${dLevel.title}</span>
-              <span class="font-label-sm text-[var(--secondary)] font-bold mt-0.5">Target: ${formatRp(dLevel.target)}</span>
-              <span class="font-label-sm text-[11px] font-semibold text-[var(--on-surface-variant)] mt-0.5">${formatRp(dLevel.collected)} terkumpul</span>
-            </div>
-          `;
+            `;
+          }
+
+          const nodeCard = document.createElement('div');
+          nodeCard.id = `dynamicNode_${dLevel.id}`;
+
+          if (attachedSQ) {
+            // Render as a row with side quest attached
+            nodeCard.className = `relative z-10 w-full flex items-center ${isLeft ? 'justify-start pl-3 pr-3' : 'justify-end pr-3 pl-3'} mb-8 animate-float`;
+            
+            const mainNodeHtml = `
+              <div class="flex flex-col items-center max-w-[170px] text-center cursor-pointer active:scale-95 transition-transform shrink-0" onclick="window.App.openLevel('${dLevel.id}')">
+                ${activeBadgeHtml}
+                <div class="${circleClass}">
+                  ${iconHtml}
+                </div>
+                <span class="font-title-md text-[var(--on-surface)] font-bold mt-1.5 leading-tight node-title">${dLevel.title}</span>
+                <span class="font-label-sm text-[var(--secondary)] font-bold mt-0.5">Target: ${formatRp(dLevel.target)}</span>
+                <span class="font-label-sm text-[11px] font-semibold text-[var(--on-surface-variant)] mt-0.5">${formatRp(dLevel.collected)} terkumpul</span>
+              </div>
+            `;
+
+            // Place side quest on opposite side of main node
+            nodeCard.innerHTML = isLeft ? (mainNodeHtml + sideQuestHtml) : (sideQuestHtml + mainNodeHtml);
+          } else {
+            // Original single node layout
+            nodeCard.className = `relative z-10 w-full flex ${isLeft ? 'justify-start pl-8' : 'justify-end pr-8'} mb-8 animate-float`;
+            nodeCard.innerHTML = `
+              <div class="flex flex-col items-center max-w-[170px] text-center cursor-pointer active:scale-95 transition-transform" onclick="window.App.openLevel('${dLevel.id}')">
+                ${activeBadgeHtml}
+                <div class="${circleClass}">
+                  ${iconHtml}
+                </div>
+                <span class="font-title-md text-[var(--on-surface)] font-bold mt-1.5 leading-tight node-title">${dLevel.title}</span>
+                <span class="font-label-sm text-[var(--secondary)] font-bold mt-0.5">Target: ${formatRp(dLevel.target)}</span>
+                <span class="font-label-sm text-[11px] font-semibold text-[var(--on-surface-variant)] mt-0.5">${formatRp(dLevel.collected)} terkumpul</span>
+              </div>
+            `;
+          }
+
           dynContainer.appendChild(nodeCard);
         });
       }
+
+      // Render dynamic side quests attached to BASE levels (level1, level2, level4)
+      // level3 already has the hardcoded sidequest node in HTML
+      this.renderBaseLevelSideQuests(store);
 
       // Update Node 1
       this.updateNodeEl('nodeLevel1', levels.level1, statusMap['level1']);
@@ -466,6 +515,9 @@
       requestAnimationFrame(() => {
         this.updateSvgPaths(activeList, statusMap);
       });
+
+      // Keep Side Quest button state updated
+      this.updateSideQuestBtnState();
     }
 
     updateNodeEl(elementId, levelData, status = 'normal') {
@@ -474,9 +526,15 @@
 
       if (levelData.deleted) {
         el.classList.add('hidden');
+        if (el.parentElement && el.parentElement.id && el.parentElement.id.startsWith('wrapperLevel')) {
+          el.parentElement.classList.add('hidden');
+        }
         return;
       } else {
         el.classList.remove('hidden');
+        if (el.parentElement && el.parentElement.id && el.parentElement.id.startsWith('wrapperLevel')) {
+          el.parentElement.classList.remove('hidden');
+        }
       }
 
       const titleEl = el.querySelector('.node-title');
@@ -675,6 +733,65 @@
       if (dottedPath) {
         dottedPath.setAttribute('stroke', theme.vars['--path-dotted'] || theme.vars['--outline-variant']);
       }
+    }
+
+    /**
+     * Render dynamic side quest nodes attached to base levels (level1, level2, level4).
+     * level3's sidequest is hardcoded in HTML. For other base levels with dynamic side quests,
+     * we inject a side quest node container near the parent node.
+     */
+    renderBaseLevelSideQuests(store) {
+      const baseLevelConfigs = [
+        { id: 'level1', wrapperId: 'wrapperLevel1', nodeId: 'nodeLevel1' },
+        { id: 'level2', wrapperId: 'wrapperLevel2', nodeId: 'nodeLevel2' },
+        { id: 'level4', wrapperId: 'wrapperLevel4', nodeId: 'nodeLevel4' },
+      ];
+
+      baseLevelConfigs.forEach(config => {
+        const wrapper = document.getElementById(config.wrapperId);
+        const existingSQ = document.getElementById(`dynamicSQ_${config.id}`);
+        if (existingSQ) existingSQ.remove();
+
+        if (!wrapper) return;
+
+        const sq = store.dynamicSideQuests.find(s => s.parentLevelId === config.id && !s.deleted);
+
+        if (!sq) {
+          // Reset wrapper classes to default single-node state
+          if (config.id === 'level1') {
+            wrapper.className = 'relative z-10 flex flex-col items-center text-center mt-2';
+          } else {
+            wrapper.className = 'relative z-10 w-full flex justify-start pl-8 mb-8';
+          }
+          return;
+        }
+
+        // Adjust wrapper classes for side-by-side row
+        if (config.id === 'level1') {
+          wrapper.className = 'relative z-10 w-full flex items-center justify-center pl-3 pr-3 mt-2';
+        } else {
+          wrapper.className = 'relative z-10 w-full flex items-center justify-start pl-3 pr-3 mb-8';
+        }
+
+        const sqContainer = document.createElement('div');
+        sqContainer.id = `dynamicSQ_${config.id}`;
+        sqContainer.className = 'flex-1 flex justify-end items-center relative';
+        sqContainer.innerHTML = `
+          <!-- Connector dotted bridge -->
+          <div class="flex-grow border-t-2 border-dashed border-[var(--outline-variant)] mx-2 h-0"></div>
+          <div class="flex flex-col items-center max-w-[125px] text-center cursor-pointer group active:scale-95 transition-transform relative shrink-0" onclick="window.App.openLevel('${sq.id}')">
+            <div class="w-12 h-12 rounded-full bg-[var(--surface-container-highest)] border-2 border-[var(--secondary-container)] text-[var(--secondary)] flex items-center justify-center shadow-sm relative overflow-hidden node-icon-wrapper">
+              <span class="material-symbols-outlined text-[22px] node-icon">${sq.icon || 'flash_on'}</span>
+              <span class="absolute -top-1 -right-1 text-[12px]">${sq.emoji || '⚡'}</span>
+            </div>
+            <span class="px-1.5 py-0.5 rounded-full bg-[var(--secondary-container)] text-[var(--on-secondary-container)] font-label-sm text-[9px] font-bold uppercase mt-1 tracking-wider">Side Quest</span>
+            <span class="font-label-sm text-[11px] text-[var(--on-surface)] font-bold leading-tight mt-0.5 node-title">${sq.title.replace('Side Quest: ', '')}</span>
+            <span class="font-label-sm text-[10px] text-[var(--secondary)] font-semibold mt-0.5 node-amount">${formatRp(sq.collected)} / ${formatRp(sq.target)}</span>
+          </div>
+        `;
+
+        wrapper.appendChild(sqContainer);
+      });
     }
 
     // --- Universal Level & Quest Detail Bottom Sheet ---
@@ -1128,6 +1245,16 @@
       const fileInput = document.getElementById('newLevelFileInput');
       const fileNameEl = document.getElementById('newLevelFileName');
 
+      // Side Quest elements
+      const addSideQuestBtn = document.getElementById('addSideQuestBtn');
+      const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
+      const cancelSideQuestBtn = document.getElementById('cancelSideQuestBtn');
+      const confirmSideQuestBtn = document.getElementById('confirmSideQuestBtn');
+
+      // Track side quest icon selection separately
+      this.selectedSQEmoji = '⚡';
+      this.selectedSQIcon = 'flash_on';
+
       if (triggerBtn) triggerBtn.addEventListener('click', () => this.openAddLevelModal());
       if (closeBtn) closeBtn.addEventListener('click', () => this.closeAddLevelModal());
       if (backdrop) {
@@ -1152,7 +1279,7 @@
         });
       }
 
-      // Emoji/Icon picker buttons
+      // Emoji/Icon picker buttons (for main level)
       document.querySelectorAll('.select-emoji-btn').forEach((btn) => {
         btn.addEventListener('click', () => {
           document.querySelectorAll('.select-emoji-btn').forEach((b) => {
@@ -1166,6 +1293,80 @@
         });
       });
 
+      // Emoji/Icon picker buttons (for side quest)
+      document.querySelectorAll('.select-sq-emoji-btn').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.select-sq-emoji-btn').forEach((b) => {
+            b.classList.remove('border-2', 'border-secondary', 'scale-105');
+            b.classList.add('border', 'border-outline-variant/40');
+          });
+          btn.classList.add('border-2', 'border-secondary', 'scale-105');
+          btn.classList.remove('border', 'border-outline-variant/40');
+          this.selectedSQEmoji = btn.getAttribute('data-sq-emoji') || '⚡';
+          this.selectedSQIcon = btn.getAttribute('data-sq-icon') || 'flash_on';
+        });
+      });
+
+      // Add Side Quest button - show sub-form
+      if (addSideQuestBtn) {
+        addSideQuestBtn.addEventListener('click', () => {
+          if (addSideQuestBtn.disabled) return;
+          if (sideQuestFormPanel) {
+            sideQuestFormPanel.classList.remove('hidden');
+            // Show which parent level will receive the side quest
+            const parent = window.AppStore.getFirstAvailableSideQuestParent();
+            const infoEl = document.getElementById('sideQuestParentInfo');
+            if (infoEl && parent) {
+              infoEl.textContent = `Side quest ini akan ditautkan ke "${parent.title}" yang belum memiliki side quest.`;
+            }
+          }
+        });
+      }
+
+      // Cancel side quest form
+      if (cancelSideQuestBtn) {
+        cancelSideQuestBtn.addEventListener('click', () => {
+          if (sideQuestFormPanel) sideQuestFormPanel.classList.add('hidden');
+        });
+      }
+
+      // Confirm adding side quest
+      if (confirmSideQuestBtn) {
+        confirmSideQuestBtn.addEventListener('click', () => {
+          const nameInput = document.getElementById('newSideQuestNameInput');
+          const targetInput = document.getElementById('newSideQuestTargetInput');
+
+          const name = nameInput ? nameInput.value.trim() : '';
+          const target = targetInput ? Number(targetInput.value) : 100000;
+
+          if (!name) {
+            showToast('Beri nama untuk side quest baru!', 'warning');
+            return;
+          }
+
+          const res = window.AppStore.addDynamicSideQuest({
+            name,
+            target,
+            emoji: this.selectedSQEmoji,
+            icon: this.selectedSQIcon,
+            guide: `Selesaikan side quest "${name}" dengan target ${formatRp(target)} untuk bonus pencapaian!`
+          });
+
+          if (!res.success) {
+            showToast(res.error || 'Gagal menambah side quest', 'warning');
+            return;
+          }
+
+          // Hide form and close modal
+          if (sideQuestFormPanel) sideQuestFormPanel.classList.add('hidden');
+          this.closeAddLevelModal();
+          this.updateBanner();
+          this.renderRoadmap();
+          showToast(`Side Quest "${res.sideQuest.title}" berhasil ditambahkan ke ${res.parent.title}!`, 'auto_awesome');
+        });
+      }
+
+      // Confirm adding main level (original behavior preserved)
       if (confirmBtn) {
         confirmBtn.addEventListener('click', () => {
           const nameInput = document.getElementById('newLevelNameInput');
@@ -1197,10 +1398,39 @@
       }
     }
 
+    /**
+     * Update the enabled/disabled state of the "+ Tambah Side Quest" button
+     * based on whether there are available side quest slots.
+     */
+    updateSideQuestBtnState() {
+      const btn = document.getElementById('addSideQuestBtn');
+      if (!btn) return;
+
+      const hasSlot = window.AppStore.hasAvailableSideQuestSlot();
+      btn.disabled = !hasSlot;
+
+      if (hasSlot) {
+        btn.classList.remove('opacity-50', 'cursor-not-allowed');
+        btn.classList.add('hover:bg-secondary', 'hover:text-on-secondary');
+        btn.title = 'Tambah side quest ke level utama yang belum memiliki side quest';
+      } else {
+        btn.classList.add('opacity-50', 'cursor-not-allowed');
+        btn.classList.remove('hover:bg-secondary', 'hover:text-on-secondary');
+        btn.title = 'Semua level utama sudah memiliki side quest. Tambah level utama baru terlebih dahulu.';
+      }
+    }
+
     openAddLevelModal() {
       this.tempAddImage = null;
       const fileNameEl = document.getElementById('newLevelFileName');
       if (fileNameEl) fileNameEl.textContent = 'Default Emoji';
+
+      // Hide side quest form when opening modal
+      const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
+      if (sideQuestFormPanel) sideQuestFormPanel.classList.add('hidden');
+
+      // Update side quest button state
+      this.updateSideQuestBtnState();
 
       const backdrop = document.getElementById('addLevelModalBackdrop');
       if (backdrop) {
@@ -1216,6 +1446,10 @@
         document.body.style.overflow = '';
       }
       this.tempAddImage = null;
+
+      // Also hide side quest form
+      const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
+      if (sideQuestFormPanel) sideQuestFormPanel.classList.add('hidden');
     }
 
     // --- Tas Harta (Inventaris Mesin Uang) ---
@@ -1530,7 +1764,8 @@
           levels.level3,
           levels.sidequest,
           levels.level4,
-          ...dynamic
+          ...dynamic,
+          ...window.AppStore.dynamicSideQuests
         ];
 
         allItems.forEach((l) => {

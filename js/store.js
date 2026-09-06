@@ -127,6 +127,7 @@ class StoreManager {
     this.STORAGE_KEYS = {
       LEVELS: 'p1m_levels_data_v3',
       DYNAMIC_LEVELS: 'p1m_dynamic_levels_v3',
+      DYNAMIC_SIDEQUESTS: 'p1m_dynamic_sidequests_v3',
       ASSETS: 'p1m_assets_data_v3',
       TRANSACTIONS: 'p1m_transactions_v3',
       APEX_TARGET: 'p1m_apex_target_v3',
@@ -152,6 +153,7 @@ class StoreManager {
     console.warn('[Store] Membersihkan data terkontaminasi dari sync Firebase lama...');
     localStorage.removeItem(this.STORAGE_KEYS.LEVELS);
     localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_LEVELS);
+    localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS);
     localStorage.removeItem(this.STORAGE_KEYS.ASSETS);
     localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
@@ -192,6 +194,7 @@ class StoreManager {
     return {
       levels: this.levels,
       dynamicLevels: this.dynamicLevels,
+      dynamicSideQuests: this.dynamicSideQuests,
       assets: this.assets,
       transactions: this.transactions,
       apexTarget: this.apexTarget
@@ -214,6 +217,11 @@ class StoreManager {
     if (Array.isArray(cloudData.dynamicLevels)) {
       this.dynamicLevels = cloudData.dynamicLevels;
       localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
+    }
+
+    if (Array.isArray(cloudData.dynamicSideQuests)) {
+      this.dynamicSideQuests = cloudData.dynamicSideQuests;
+      localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS, JSON.stringify(this.dynamicSideQuests));
     }
 
     if (Array.isArray(cloudData.assets)) {
@@ -266,6 +274,18 @@ class StoreManager {
       }
     } else {
       this.dynamicLevels = [];
+    }
+
+    // Load Dynamic Side Quests
+    const savedDynSQ = localStorage.getItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS);
+    if (savedDynSQ) {
+      try {
+        this.dynamicSideQuests = JSON.parse(savedDynSQ);
+      } catch (e) {
+        this.dynamicSideQuests = [];
+      }
+    } else {
+      this.dynamicSideQuests = [];
     }
 
     // Load Assets (Tas Harta)
@@ -347,6 +367,7 @@ class StoreManager {
   save(skipCloud = false) {
     localStorage.setItem(this.STORAGE_KEYS.LEVELS, JSON.stringify(this.levels));
     localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
+    localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS, JSON.stringify(this.dynamicSideQuests));
     localStorage.setItem(this.STORAGE_KEYS.ASSETS, JSON.stringify(this.assets));
     localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
     localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
@@ -358,7 +379,9 @@ class StoreManager {
 
   getLevel(id) {
     if (this.levels[id]) return this.levels[id];
-    return this.dynamicLevels.find((l) => l.id === id) || null;
+    const dynLevel = this.dynamicLevels.find((l) => l.id === id);
+    if (dynLevel) return dynLevel;
+    return this.dynamicSideQuests.find((sq) => sq.id === id) || null;
   }
 
   /**
@@ -419,23 +442,35 @@ class StoreManager {
    * Seamlessly connects path for remaining levels.
    */
   deleteLevel(id) {
-    // 1. Dynamic level
+    // 1. Dynamic side quest
+    const sqIndex = this.dynamicSideQuests.findIndex((sq) => sq.id === id);
+    if (sqIndex !== -1) {
+      this.dynamicSideQuests.splice(sqIndex, 1);
+      this.save();
+      return { success: true, deletedId: id };
+    }
+
+    // 2. Dynamic level
     const dynIndex = this.dynamicLevels.findIndex((l) => l.id === id);
     if (dynIndex !== -1) {
       const removed = this.dynamicLevels.splice(dynIndex, 1)[0];
       if (removed && removed.target) {
         this.apexTarget = Math.max(1000000, this.apexTarget - Number(removed.target));
       }
+      // Also remove any dynamic side quest attached to this deleted level
+      this.dynamicSideQuests = this.dynamicSideQuests.filter((sq) => sq.parentLevelId !== id);
       this.save();
       return { success: true, deletedId: id };
     }
 
-    // 2. Base level (mark as deleted so it hides from roadmap and SVG path auto-bypasses it)
+    // 3. Base level (mark as deleted so it hides from roadmap and SVG path auto-bypasses it)
     if (this.levels[id]) {
       if (this.levels[id].isApex) {
         return { success: false, error: 'Puncak utama tidak dapat dihapus' };
       }
       this.levels[id].deleted = true;
+      // Also remove any dynamic side quest attached to this base level
+      this.dynamicSideQuests = this.dynamicSideQuests.filter((sq) => sq.parentLevelId !== id);
       this.save();
       return { success: true, deletedId: id };
     }
@@ -562,6 +597,116 @@ class StoreManager {
     return newLevel;
   }
 
+  /**
+   * Check if there are main levels that don't yet have a side quest attached.
+   * Returns true if at least 1 main level has an empty side quest slot.
+   */
+  hasAvailableSideQuestSlot() {
+    // Gather all main levels (base ordered levels + dynamic levels, excluding apex and sidequest itself)
+    const mainLevels = [];
+
+    // Base levels (level1-level4)
+    ['level1', 'level2', 'level3', 'level4'].forEach(key => {
+      const lvl = this.levels[key];
+      if (lvl && !lvl.deleted && !lvl.isSideQuest && !lvl.isApex) {
+        mainLevels.push(lvl.id);
+      }
+    });
+
+    // Dynamic levels
+    this.dynamicLevels.forEach(dl => {
+      if (!dl.deleted) {
+        mainLevels.push(dl.id);
+      }
+    });
+
+    // Collect all parent level IDs that already have a side quest
+    const occupiedSlots = new Set();
+
+    // The hardcoded sidequest is attached to level3
+    if (this.levels.sidequest && !this.levels.sidequest.deleted) {
+      occupiedSlots.add('level3');
+    }
+
+    // Dynamic side quests
+    this.dynamicSideQuests.forEach(sq => {
+      if (!sq.deleted && sq.parentLevelId) {
+        occupiedSlots.add(sq.parentLevelId);
+      }
+    });
+
+    // Check if any main level is NOT in occupiedSlots
+    return mainLevels.some(id => !occupiedSlots.has(id));
+  }
+
+  /**
+   * Get the first main level (from bottom/earliest order) that doesn't have a side quest yet.
+   * Returns the level object or null.
+   */
+  getFirstAvailableSideQuestParent() {
+    const occupiedSlots = new Set();
+
+    if (this.levels.sidequest && !this.levels.sidequest.deleted) {
+      occupiedSlots.add('level3');
+    }
+    this.dynamicSideQuests.forEach(sq => {
+      if (!sq.deleted && sq.parentLevelId) {
+        occupiedSlots.add(sq.parentLevelId);
+      }
+    });
+
+    // Check base levels first (order 1-4)
+    const baseKeys = ['level1', 'level2', 'level3', 'level4'];
+    for (const key of baseKeys) {
+      const lvl = this.levels[key];
+      if (lvl && !lvl.deleted && !lvl.isSideQuest && !lvl.isApex && !occupiedSlots.has(lvl.id)) {
+        return lvl;
+      }
+    }
+
+    // Then check dynamic levels (sorted by order)
+    const sortedDynamic = [...this.dynamicLevels].filter(dl => !dl.deleted).sort((a, b) => (a.order || 0) - (b.order || 0));
+    for (const dl of sortedDynamic) {
+      if (!occupiedSlots.has(dl.id)) {
+        return dl;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Add a new dynamic side quest attached to the first available main level.
+   */
+  addDynamicSideQuest(data) {
+    const parent = this.getFirstAvailableSideQuestParent();
+    if (!parent) return { success: false, error: 'Semua level utama sudah memiliki side quest.' };
+
+    const sqId = 'sidequest_' + Date.now();
+    const targetSQ = Number(data.target) || 100000;
+
+    const newSideQuest = {
+      id: sqId,
+      title: 'Side Quest: ' + (data.name || 'Misi Sampingan'),
+      badge: 'Side Quest • Misi Tambahan',
+      icon: data.icon || 'flash_on',
+      emoji: data.emoji || '⚡',
+      customImage: data.customImage || null,
+      guide: data.guide || `Selesaikan misi sampingan untuk mempercepat pencapaian ${parent.title}.`,
+      collected: 0,
+      target: targetSQ,
+      completed: false,
+      deleted: false,
+      isSideQuest: true,
+      isDynamicSideQuest: true,
+      parentLevelId: parent.id
+    };
+
+    this.dynamicSideQuests.push(newSideQuest);
+    this.save();
+    return { success: true, sideQuest: newSideQuest, parent };
+  }
+
   addAsset(asset) {
     const newAsset = {
       id: 'asset-' + Date.now(),
@@ -603,6 +748,13 @@ class StoreManager {
       }
     });
 
+    // Dynamic side quests (only non-deleted)
+    this.dynamicSideQuests.forEach((sq) => {
+      if (!sq.deleted) {
+        totalCollected += (Number(sq.collected) || 0);
+      }
+    });
+
     const targetGoal = Math.max(1000000, sumMainTargets, this.apexTarget);
     const pct = targetGoal > 0 ? Math.min(100, (totalCollected / targetGoal) * 100) : 0;
 
@@ -617,6 +769,7 @@ class StoreManager {
   resetAll() {
     localStorage.removeItem(this.STORAGE_KEYS.LEVELS);
     localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_LEVELS);
+    localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS);
     localStorage.removeItem(this.STORAGE_KEYS.ASSETS);
     localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
     localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
