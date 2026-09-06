@@ -781,7 +781,15 @@
           </div>
         </div>
         <div>
-          <label class="block font-label-sm text-[11px] text-on-surface font-bold mb-1">Ikon Side Quest</label>
+          <label class="block font-label-sm text-[11px] text-on-surface font-bold mb-1">Ikon / Foto Side Quest</label>
+          <div class="flex items-center gap-2.5 mb-2">
+            <input type="file" id="newSideQuestFileInput" accept="image/*" class="hidden"/>
+            <button type="button" id="triggerNewSideQuestUploadBtn" class="px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[11px] font-bold flex items-center gap-1 shadow-xs active:scale-95">
+              <span class="material-symbols-outlined text-[14px]">upload</span> Upload Foto Kustom
+            </button>
+            <span id="newSideQuestFileName" class="text-[10px] text-on-surface-variant truncate max-w-[140px]">Default Emoji</span>
+            <button type="button" id="removeNewSideQuestImageBtn" class="text-[10px] text-error font-semibold hover:underline hidden">Hapus</button>
+          </div>
           <div class="flex gap-2">
             <button type="button" data-sq-emoji="⚡" data-sq-icon="flash_on" class="select-sq-emoji-btn w-9 h-9 rounded-full bg-secondary-container text-base border-2 border-secondary flex items-center justify-center">⚡</button>
             <button type="button" data-sq-emoji="🎯" data-sq-icon="gps_fixed" class="select-sq-emoji-btn w-9 h-9 rounded-full bg-surface-container text-base border border-outline-variant/40 flex items-center justify-center">🎯</button>
@@ -799,6 +807,125 @@
           </button>
         </div>
       </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       CLOUD SYNC, MULTI-DEVICE PAIRING & BACKUP MODAL
+       ========================================================================= -->
+  <div id="cloudSyncModalBackdrop" class="dialog-modal-backdrop">
+    <div class="dialog-modal-content space-y-4 max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-full bg-emerald-500/15 text-emerald-600 flex items-center justify-center font-bold">
+            <span class="material-symbols-outlined text-[20px]">cloud_sync</span>
+          </div>
+          <div>
+            <h3 class="font-headline-sm text-base text-on-surface font-bold">Sinkronisasi Cloud & Cadangan</h3>
+            <span class="font-label-sm text-[10px] text-on-surface-variant">Multi-Device &amp; Backup Aman</span>
+          </div>
+        </div>
+        <button id="closeCloudSyncModalBtn" type="button" class="w-8 h-8 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface">
+          <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+      </div>
+
+      <!-- Status Cloud Card -->
+      <div class="p-3 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+            <span id="syncModalStatusDot" class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block"></span>
+            Status Sinkronisasi
+          </span>
+          <span id="syncModalStatusBadge" class="px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 font-label-sm text-[10px] font-bold">
+            Tersinkron Cloud
+          </span>
+        </div>
+        <div class="text-[11px] text-on-surface-variant flex items-center justify-between bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/40">
+          <div class="truncate mr-2">
+            <span class="text-[10px] text-on-surface-variant/70 block">User ID (UID):</span>
+            <span id="syncModalUidDisplay" class="font-mono text-[10.5px] text-on-surface font-semibold select-all">Memuat...</span>
+          </div>
+          <button id="copyUidBtn" type="button" class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-[10px] font-bold text-primary flex items-center gap-1 shrink-0 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-[12px]">content_copy</span> Salin
+          </button>
+        </div>
+      </div>
+
+      <!-- Section: Hubungkan PC ⇄ HP (Pairing) -->
+      <div class="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-3">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-secondary">phonelink</span>
+          <h4 class="font-title-md text-xs font-bold text-on-surface">Hubungkan Perangkat (PC ⇄ HP)</h4>
+        </div>
+        <p class="font-body-sm text-[11px] text-on-surface-variant leading-relaxed">
+          Gunakan kunci sinkronisasi untuk memindahkan atau menyamakan data antara PC dan HP Anda.
+        </p>
+
+        <!-- Ekspor Kunci (di PC) -->
+        <div class="space-y-1.5">
+          <span class="font-label-sm text-[10px] font-bold text-on-surface uppercase tracking-wider">Langkah 1: Jika di PC (Sumber Data Asli)</span>
+          <button id="exportSyncKeyBtn" type="button" class="w-full h-10 rounded-xl bg-secondary-container text-on-secondary-container font-title-md text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-xs">
+            <span class="material-symbols-outlined text-[16px]">key</span>
+            Salin Kunci Sinkronisasi Akun PC
+          </button>
+        </div>
+
+        <!-- Impor Kunci (di HP) -->
+        <div class="space-y-1.5 pt-1 border-t border-outline-variant/30">
+          <span class="font-label-sm text-[10px] font-bold text-on-surface uppercase tracking-wider">Langkah 2: Jika di HP (Penerima Data)</span>
+          <div class="flex gap-2">
+            <input type="text" id="importSyncKeyInput" placeholder="Tempel kunci sinkronisasi dari PC..." class="flex-1 h-10 px-3 rounded-xl bg-surface-container-lowest text-xs outline-none border border-outline-variant/50 focus:border-secondary font-mono text-[11px]"/>
+            <button id="applySyncKeyBtn" type="button" class="px-3.5 h-10 rounded-xl bg-primary text-on-primary font-title-md text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-all shadow-xs shrink-0">
+              <span class="material-symbols-outlined text-[15px]">check</span> Terapkan
+            </button>
+          </div>
+          <p class="text-[10px] text-on-surface-variant leading-tight">
+            💡 Menerapkan kunci ini di HP akan membersihkan sisa data lama (TDW/Buzzer) dan langsung mengaktifkan data asli dari PC.
+          </p>
+        </div>
+      </div>
+
+      <!-- Section: Cadangan File JSON Mandiri -->
+      <div class="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-2.5">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] text-primary">save</span>
+          <h4 class="font-title-md text-xs font-bold text-on-surface">Cadangan Data Mandiri (.JSON)</h4>
+        </div>
+        <p class="font-body-sm text-[11px] text-on-surface-variant leading-tight">
+          Simpan file cadangan ke galeri/drive lokal perangkat Anda agar data selalu aman 100%.
+        </p>
+
+        <div class="grid grid-cols-2 gap-2 pt-0.5">
+          <button id="downloadBackupBtn" type="button" class="h-10 rounded-xl bg-surface-container-lowest border border-outline-variant hover:border-primary text-primary font-title-md text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-[16px]">download</span> Download Backup
+          </button>
+          <label for="restoreBackupFileInput" class="h-10 rounded-xl bg-surface-container-lowest border border-outline-variant hover:border-secondary text-secondary font-title-md text-xs font-bold flex items-center justify-center gap-1 active:scale-95 transition-all cursor-pointer">
+            <span class="material-symbols-outlined text-[16px]">upload_file</span> Pulihkan Backup
+            <input type="file" id="restoreBackupFileInput" accept=".json" class="hidden"/>
+          </label>
+        </div>
+      </div>
+
+      <!-- Section: Pembersihan Cache HP -->
+      <div class="p-3 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px] text-on-surface-variant">cleaning_services</span>
+            <span class="text-xs font-bold text-on-surface">Pembersihan Cache &amp; Update HP</span>
+          </div>
+          <button id="forceRefreshAppBtn" type="button" class="px-3 py-1.5 rounded-xl bg-error-container/20 text-error hover:bg-error-container/40 text-[11px] font-bold flex items-center gap-1 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-[14px]">refresh</span> Reload Bersih
+          </button>
+        </div>
+        <p class="text-[10px] text-on-surface-variant leading-tight">
+          Jika tampilan di HP masih menampilkan versi lawas, tombol ini akan membersihkan Service Worker cache dan memuat versi aplikasi paling mutakhir.
+        </p>
+      </div>
+
+      <button id="dismissCloudSyncModalBtn" type="button" class="btn-tactile btn-primary-tactile w-full h-10 text-xs">
+        Tutup
+      </button>
     </div>
   </div>
 

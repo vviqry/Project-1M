@@ -246,6 +246,88 @@ class StoreManager {
     }
   }
 
+  /**
+   * Import data from JSON object (Backup or Sync Key), with full state refresh and immediate cloud push.
+   */
+  importBackupData(backupData) {
+    if (!backupData || typeof backupData !== 'object') {
+      return { success: false, error: 'Format data cadangan tidak valid.' };
+    }
+
+    if (backupData.levels && typeof backupData.levels === 'object') {
+      this.levels = backupData.levels;
+      Object.keys(DEFAULT_LEVELS).forEach((k) => {
+        if (!this.levels[k]) {
+          this.levels[k] = JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));
+        }
+      });
+    }
+
+    if (Array.isArray(backupData.dynamicLevels)) {
+      this.dynamicLevels = backupData.dynamicLevels;
+    }
+
+    if (Array.isArray(backupData.dynamicSideQuests)) {
+      this.dynamicSideQuests = backupData.dynamicSideQuests;
+    }
+
+    if (Array.isArray(backupData.assets)) {
+      this.assets = backupData.assets;
+    }
+
+    if (Array.isArray(backupData.transactions)) {
+      this.transactions = backupData.transactions;
+    }
+
+    if (backupData.apexTarget !== undefined) {
+      this.apexTarget = Number(backupData.apexTarget);
+    } else {
+      this.recalculateApex();
+    }
+
+    // Persist to localStorage and force immediate cloud save to current device's cloud path
+    this.save(false);
+
+    if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
+      window.FirebaseSync.saveToCloud(this.exportData(), true);
+      window.dispatchEvent(new CustomEvent('p1m-cloud-synced', { detail: { source: 'backup_restore' } }));
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Generate an encoded sync token containing complete user progress data.
+   */
+  generateSyncToken() {
+    try {
+      const dataStr = JSON.stringify(this.exportData());
+      const encoded = btoa(encodeURIComponent(dataStr));
+      return 'P1M_' + encoded;
+    } catch (e) {
+      console.error('Failed to generate sync token:', e);
+      return null;
+    }
+  }
+
+  /**
+   * Restore state from an encoded sync token string.
+   */
+  applySyncToken(tokenStr) {
+    if (!tokenStr || typeof tokenStr !== 'string') {
+      return { success: false, error: 'Kunci sinkronisasi tidak valid.' };
+    }
+    const cleanStr = tokenStr.trim().replace(/^P1M_/, '');
+    try {
+      const decoded = decodeURIComponent(atob(cleanStr));
+      const parsed = JSON.parse(decoded);
+      return this.importBackupData(parsed);
+    } catch (e) {
+      console.error('Failed to apply sync token:', e);
+      return { success: false, error: 'Format kunci sinkronisasi rusak atau salah.' };
+    }
+  }
+
   loadData() {
     // Load Levels
     const savedLevels = localStorage.getItem(this.STORAGE_KEYS.LEVELS);

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'p1m-quest-tracker-v5';
+const CACHE_NAME = 'p1m-quest-tracker-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

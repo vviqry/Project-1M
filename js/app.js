@@ -190,30 +190,68 @@
       const btn = document.getElementById('cloudSyncBtn');
       const icon = document.getElementById('cloudStatusIcon');
       const dot = document.getElementById('cloudStatusDot');
+      const modalBackdrop = document.getElementById('cloudSyncModalBackdrop');
+      const closeBtn = document.getElementById('closeCloudSyncModalBtn');
+      const dismissBtn = document.getElementById('dismissCloudSyncModalBtn');
+      const copyUidBtn = document.getElementById('copyUidBtn');
+      const exportSyncKeyBtn = document.getElementById('exportSyncKeyBtn');
+      const applySyncKeyBtn = document.getElementById('applySyncKeyBtn');
+      const downloadBackupBtn = document.getElementById('downloadBackupBtn');
+      const restoreBackupFileInput = document.getElementById('restoreBackupFileInput');
+      const forceRefreshAppBtn = document.getElementById('forceRefreshAppBtn');
+
       if (!btn) return;
 
       const updateUI = (status, label) => {
+        const modalDot = document.getElementById('syncModalStatusDot');
+        const modalBadge = document.getElementById('syncModalStatusBadge');
+        const uidEl = document.getElementById('syncModalUidDisplay');
+
+        if (uidEl && window.FirebaseSync) {
+          uidEl.textContent = window.FirebaseSync.userId || 'Menunggu autentikasi...';
+        }
+
         if (!icon || !dot) return;
         if (status === 'synced') {
           icon.textContent = 'cloud_done';
           icon.className = 'material-symbols-outlined text-[20px] text-emerald-500';
           dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface';
-          btn.title = 'Firebase Cloud: Data Tersinkron Permanen (Klik untuk info)';
+          btn.title = 'Firebase Cloud: Data Tersinkron Permanen (Klik untuk menu sync)';
+          if (modalDot) modalDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block';
+          if (modalBadge) {
+            modalBadge.className = 'px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 font-label-sm text-[10px] font-bold';
+            modalBadge.textContent = 'Tersinkron Cloud';
+          }
         } else if (status === 'syncing') {
           icon.textContent = 'sync';
           icon.className = 'material-symbols-outlined text-[20px] text-amber-500 animate-spin';
           dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-surface animate-ping';
           btn.title = 'Firebase Cloud: Sedang Menyimpan Data...';
+          if (modalDot) modalDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-500 inline-block animate-pulse';
+          if (modalBadge) {
+            modalBadge.className = 'px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 font-label-sm text-[10px] font-bold';
+            modalBadge.textContent = 'Menyimpan...';
+          }
         } else if (status === 'offline') {
           icon.textContent = 'cloud_off';
           icon.className = 'material-symbols-outlined text-[20px] text-zinc-400';
           dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-zinc-400 ring-2 ring-surface';
           btn.title = 'Firebase Cloud: Mode Offline (Data tersimpan aman di browser)';
+          if (modalDot) modalDot.className = 'w-2.5 h-2.5 rounded-full bg-zinc-400 inline-block';
+          if (modalBadge) {
+            modalBadge.className = 'px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-500 font-label-sm text-[10px] font-bold';
+            modalBadge.textContent = 'Mode Offline';
+          }
         } else if (status === 'error') {
           icon.textContent = 'cloud_off';
           icon.className = 'material-symbols-outlined text-[20px] text-rose-500';
           dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-rose-500 ring-2 ring-surface';
           btn.title = 'Firebase Cloud: Gagal Terhubung ke Database';
+          if (modalDot) modalDot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 inline-block';
+          if (modalBadge) {
+            modalBadge.className = 'px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 font-label-sm text-[10px] font-bold';
+            modalBadge.textContent = 'Koneksi Terputus';
+          }
         }
       };
 
@@ -228,18 +266,166 @@
         updateUI(window.FirebaseSync.status);
       }
 
+      // Open Modal on Button Click
       btn.addEventListener('click', () => {
-        const syncStatus = window.FirebaseSync ? window.FirebaseSync.status : 'unknown';
-        if (syncStatus === 'synced') {
-          showToast('☁️ Data abadi & tersinkron di Firebase Cloud!', 'cloud_done');
-        } else if (syncStatus === 'syncing') {
-          showToast('Sedang menyimpan ke cloud Firebase...', 'sync');
-        } else if (syncStatus === 'offline') {
-          showToast('Mode offline. Data tetap tersimpan aman di perangkat lokal.', 'cloud_off');
-        } else {
-          showToast('Menghubungkan ke Firebase Cloud...', 'cloud');
-        }
+        this.openCloudSyncModal();
       });
+
+      if (closeBtn) closeBtn.addEventListener('click', () => this.closeCloudSyncModal());
+      if (dismissBtn) dismissBtn.addEventListener('click', () => this.closeCloudSyncModal());
+      if (modalBackdrop) {
+        modalBackdrop.addEventListener('click', (e) => {
+          if (e.target === modalBackdrop) this.closeCloudSyncModal();
+        });
+      }
+
+      // Copy UID Button
+      if (copyUidBtn) {
+        copyUidBtn.addEventListener('click', () => {
+          const uid = window.FirebaseSync ? window.FirebaseSync.userId : '';
+          if (uid) {
+            navigator.clipboard.writeText(uid).then(() => {
+              showToast('User ID disalin ke clipboard!', 'content_copy');
+            }).catch(() => {
+              showToast(uid, 'info');
+            });
+          }
+        });
+      }
+
+      // Export Sync Key Button (for PC)
+      if (exportSyncKeyBtn) {
+        exportSyncKeyBtn.addEventListener('click', () => {
+          const token = window.AppStore.generateSyncToken();
+          if (!token) {
+            showToast('Gagal membuat kunci sinkronisasi', 'warning');
+            return;
+          }
+          navigator.clipboard.writeText(token).then(() => {
+            showToast('Kunci sinkronisasi disalin! Kirim dan tempel di HP Anda.', 'key');
+          }).catch(() => {
+            prompt('Salin Kunci Sinkronisasi PC ini dan tempel di HP Anda:', token);
+          });
+        });
+      }
+
+      // Apply Sync Key Button (for HP)
+      if (applySyncKeyBtn) {
+        applySyncKeyBtn.addEventListener('click', () => {
+          const input = document.getElementById('importSyncKeyInput');
+          const token = input ? input.value.trim() : '';
+          if (!token) {
+            showToast('Tempel kunci sinkronisasi terlebih dahulu!', 'warning');
+            return;
+          }
+
+          if (confirm('Terapkan kunci sinkronisasi ini? Data lama di perangkat ini akan diganti dengan data dari PC.')) {
+            const res = window.AppStore.applySyncToken(token);
+            if (res.success) {
+              if (input) input.value = '';
+              this.closeCloudSyncModal();
+              this.refreshAll();
+              fireConfetti();
+              showToast('Perangkat berhasil tersinkron dengan data PC!', 'cloud_done');
+            } else {
+              showToast(res.error || 'Kunci sinkronisasi tidak valid', 'warning');
+            }
+          }
+        });
+      }
+
+      // Download Backup (.json)
+      if (downloadBackupBtn) {
+        downloadBackupBtn.addEventListener('click', () => {
+          const data = window.AppStore.exportData();
+          const jsonStr = JSON.stringify(data, null, 2);
+          const blob = new Blob([jsonStr], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          const dateStr = new Date().toISOString().slice(0, 10);
+          a.href = url;
+          a.download = `project1m_cadangan_${dateStr}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('File cadangan (.json) berhasil diunduh!', 'download');
+        });
+      }
+
+      // Restore Backup (.json)
+      if (restoreBackupFileInput) {
+        restoreBackupFileInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            try {
+              const parsed = JSON.parse(event.target.result);
+              const res = window.AppStore.importBackupData(parsed);
+              if (res.success) {
+                this.closeCloudSyncModal();
+                this.refreshAll();
+                fireConfetti();
+                showToast('Data berhasil dipulihkan dari file cadangan!', 'check_circle');
+              } else {
+                showToast(res.error || 'Format data cadangan tidak sesuai', 'warning');
+              }
+            } catch (err) {
+              showToast('File JSON cadangan rusak atau tidak valid', 'error');
+            }
+          };
+          reader.readAsText(file);
+          // Reset input so same file can be selected again if needed
+          restoreBackupFileInput.value = '';
+        });
+      }
+
+      // Force Refresh App & Clean Cache (especially useful on mobile PWA)
+      if (forceRefreshAppBtn) {
+        forceRefreshAppBtn.addEventListener('click', () => {
+          if (confirm('Bersihkan cache dan muat ulang versi aplikasi paling mutakhir?')) {
+            if ('caches' in window) {
+              caches.keys().then((keys) => {
+                return Promise.all(keys.map((k) => caches.delete(k)));
+              }).then(() => {
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then((regs) => {
+                    regs.forEach((r) => r.unregister());
+                  }).finally(() => {
+                    window.location.reload(true);
+                  });
+                } else {
+                  window.location.reload(true);
+                }
+              });
+            } else {
+              window.location.reload(true);
+            }
+          }
+        });
+      }
+    }
+
+    openCloudSyncModal() {
+      const uidEl = document.getElementById('syncModalUidDisplay');
+      if (uidEl && window.FirebaseSync) {
+        uidEl.textContent = window.FirebaseSync.userId || 'Menunggu autentikasi...';
+      }
+      const backdrop = document.getElementById('cloudSyncModalBackdrop');
+      if (backdrop) {
+        backdrop.classList.add('active');
+        document.body.style.overflow = 'hidden';
+      }
+    }
+
+    closeCloudSyncModal() {
+      const backdrop = document.getElementById('cloudSyncModalBackdrop');
+      if (backdrop) {
+        backdrop.classList.remove('active');
+        document.body.style.overflow = '';
+      }
     }
 
     // --- Top Banner & Header HUD ---
@@ -387,14 +573,17 @@
           // Build side quest HTML if attached
           let sideQuestHtml = '';
           if (attachedSQ) {
+            const sqIconContent = attachedSQ.customImage
+              ? `<img src="${attachedSQ.customImage}" alt="${attachedSQ.title}" class="w-full h-full rounded-full object-cover shadow-sm"/>`
+              : `<span class="material-symbols-outlined text-[22px] node-icon">${attachedSQ.icon || 'flash_on'}</span><span class="absolute -top-1 -right-1 text-[12px]">${attachedSQ.emoji || '⚡'}</span>`;
+
             sideQuestHtml = `
               <div class="flex-1 flex ${isLeft ? 'justify-end' : 'justify-start'} items-center relative">
                 <!-- Connector dotted bridge -->
                 <div class="flex-grow border-t-2 border-dashed border-[var(--outline-variant)] mx-2 h-0"></div>
                 <div class="flex flex-col items-center max-w-[125px] text-center cursor-pointer group active:scale-95 transition-transform relative" onclick="window.App.openLevel('${attachedSQ.id}')">
                   <div class="w-12 h-12 rounded-full bg-[var(--surface-container-highest)] border-2 border-[var(--secondary-container)] text-[var(--secondary)] flex items-center justify-center shadow-sm relative overflow-hidden node-icon-wrapper">
-                    <span class="material-symbols-outlined text-[22px] node-icon">${attachedSQ.icon || 'flash_on'}</span>
-                    <span class="absolute -top-1 -right-1 text-[12px]">${attachedSQ.emoji || '⚡'}</span>
+                    ${sqIconContent}
                   </div>
                   <span class="px-1.5 py-0.5 rounded-full bg-[var(--secondary-container)] text-[var(--on-secondary-container)] font-label-sm text-[9px] font-bold uppercase mt-1 tracking-wider">Side Quest</span>
                   <span class="font-label-sm text-[11px] text-[var(--on-surface)] font-bold leading-tight mt-0.5 node-title">${attachedSQ.title.replace('Side Quest: ', '')}</span>
@@ -776,13 +965,16 @@
         const sqContainer = document.createElement('div');
         sqContainer.id = `dynamicSQ_${config.id}`;
         sqContainer.className = 'flex-1 flex justify-end items-center relative';
+        const baseSqIconContent = sq.customImage
+          ? `<img src="${sq.customImage}" alt="${sq.title}" class="w-full h-full rounded-full object-cover shadow-sm"/>`
+          : `<span class="material-symbols-outlined text-[22px] node-icon">${sq.icon || 'flash_on'}</span><span class="absolute -top-1 -right-1 text-[12px]">${sq.emoji || '⚡'}</span>`;
+
         sqContainer.innerHTML = `
           <!-- Connector dotted bridge -->
           <div class="flex-grow border-t-2 border-dashed border-[var(--outline-variant)] mx-2 h-0"></div>
           <div class="flex flex-col items-center max-w-[125px] text-center cursor-pointer group active:scale-95 transition-transform relative shrink-0" onclick="window.App.openLevel('${sq.id}')">
             <div class="w-12 h-12 rounded-full bg-[var(--surface-container-highest)] border-2 border-[var(--secondary-container)] text-[var(--secondary)] flex items-center justify-center shadow-sm relative overflow-hidden node-icon-wrapper">
-              <span class="material-symbols-outlined text-[22px] node-icon">${sq.icon || 'flash_on'}</span>
-              <span class="absolute -top-1 -right-1 text-[12px]">${sq.emoji || '⚡'}</span>
+              ${baseSqIconContent}
             </div>
             <span class="px-1.5 py-0.5 rounded-full bg-[var(--secondary-container)] text-[var(--on-secondary-container)] font-label-sm text-[9px] font-bold uppercase mt-1 tracking-wider">Side Quest</span>
             <span class="font-label-sm text-[11px] text-[var(--on-surface)] font-bold leading-tight mt-0.5 node-title">${sq.title.replace('Side Quest: ', '')}</span>
@@ -1307,6 +1499,38 @@
         });
       });
 
+      // Side Quest custom image file upload
+      const sqUploadBtn = document.getElementById('triggerNewSideQuestUploadBtn');
+      const sqFileInput = document.getElementById('newSideQuestFileInput');
+      const sqFileNameEl = document.getElementById('newSideQuestFileName');
+      const removeSqImgBtn = document.getElementById('removeNewSideQuestImageBtn');
+
+      if (sqUploadBtn && sqFileInput) {
+        sqUploadBtn.addEventListener('click', () => sqFileInput.click());
+      }
+      if (sqFileInput) {
+        sqFileInput.addEventListener('change', (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+
+          compressImage(file, (base64) => {
+            this.tempSQAddImage = base64;
+            if (sqFileNameEl) sqFileNameEl.textContent = 'Foto Terpilih ✓';
+            if (removeSqImgBtn) removeSqImgBtn.classList.remove('hidden');
+            showToast('Foto kustom side quest berhasil dimuat!', 'image');
+          });
+        });
+      }
+      if (removeSqImgBtn) {
+        removeSqImgBtn.addEventListener('click', () => {
+          this.tempSQAddImage = null;
+          if (sqFileNameEl) sqFileNameEl.textContent = 'Default Emoji';
+          removeSqImgBtn.classList.add('hidden');
+          if (sqFileInput) sqFileInput.value = '';
+          showToast('Foto kustom side quest dihapus', 'info');
+        });
+      }
+
       // Add Side Quest button - show sub-form
       if (addSideQuestBtn) {
         addSideQuestBtn.addEventListener('click', () => {
@@ -1347,6 +1571,7 @@
             parentLevelId: selectedParentId,
             emoji: this.selectedSQEmoji,
             icon: this.selectedSQIcon,
+            customImage: this.tempSQAddImage,
             guide: `Selesaikan side quest "${name}" dengan target ${formatRp(target)} untuk bonus pencapaian!`
           });
 
@@ -1451,8 +1676,13 @@
 
     openAddLevelModal() {
       this.tempAddImage = null;
+      this.tempSQAddImage = null;
       const fileNameEl = document.getElementById('newLevelFileName');
       if (fileNameEl) fileNameEl.textContent = 'Default Emoji';
+      const sqFileNameEl = document.getElementById('newSideQuestFileName');
+      if (sqFileNameEl) sqFileNameEl.textContent = 'Default Emoji';
+      const removeSqImgBtn = document.getElementById('removeNewSideQuestImageBtn');
+      if (removeSqImgBtn) removeSqImgBtn.classList.add('hidden');
 
       // Hide side quest form when opening modal
       const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
@@ -1476,6 +1706,7 @@
         document.body.style.overflow = '';
       }
       this.tempAddImage = null;
+      this.tempSQAddImage = null;
 
       // Also hide side quest form
       const sideQuestFormPanel = document.getElementById('sideQuestFormPanel');
