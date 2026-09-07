@@ -425,3 +425,17 @@ html, body {
 .animate-fadeIn {
   animation: fadeInSlide 0.3s ease-out;
 }
+
+/* User Profile Header Avatar Button */
+#userProfileBtn {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+#userProfileBtn:hover {
+  border-color: var(--primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+#userProfileBtn:active {
+  transform: scale(0.92);
+}

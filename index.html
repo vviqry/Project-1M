@@ -204,32 +204,29 @@
     <header class="fixed top-0 w-full max-w-[448px] z-40 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/40 shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe">
       <div class="h-20 px-4 flex items-center justify-between">
         
-        <!-- Left: Project Brand & Goal -->
-        <div class="flex items-center gap-2.5">
-          <div class="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-sm shrink-0">
-            <span class="material-symbols-outlined text-[22px]">flag</span>
-          </div>
-          <div class="flex flex-col">
-            <div class="flex items-center gap-1.5">
-              <span class="font-headline-sm text-[18px] text-primary font-bold leading-tight" id="headerProjectTitle">Project 1M</span>
-              <span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold" id="headerBadgeGoal">1 Juta</span>
-            </div>
-            <div class="flex items-center gap-1 text-[11px] leading-tight text-on-surface-variant font-medium">
-              <span>Terkumpul:</span>
-              <span class="font-bold text-primary" id="headerCollectedDisplay">Rp 650.000</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right: Action Buttons (User Profile, Cloud Sync, Tas Harta, Tema, Info) -->
-        <div class="flex items-center gap-1.5">
-          <!-- User Profile Chip / Button -->
-          <button id="userProfileBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container/80 hover:bg-surface-container text-on-surface-variant overflow-hidden border border-outline-variant/50 shadow-xs active:scale-95 transition-all relative group" title="Profil Akun Google & Sinkronisasi">
+        <!-- Left: User Profile Avatar & Project Brand / Goal -->
+        <div class="flex items-center gap-2.5 min-w-0">
+          <!-- User Profile Avatar Button (Replaced Flag Icon - Click to open Profile & Sync Modal) -->
+          <button id="userProfileBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container/80 hover:bg-surface-container text-on-surface-variant overflow-hidden border border-outline-variant/50 shadow-xs active:scale-95 transition-all relative shrink-0 group cursor-pointer" title="Profil Akun Google & Sinkronisasi">
             <img id="headerUserAvatar" src="" alt="User" class="w-full h-full object-cover hidden"/>
             <span id="headerUserInitials" class="font-title-md text-xs font-bold text-primary">P1M</span>
             <span id="headerUserOnlineDot" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface"></span>
           </button>
 
+          <div class="flex flex-col min-w-0">
+            <div class="flex items-center gap-1.5">
+              <span class="font-headline-sm text-[18px] text-primary font-bold leading-tight truncate" id="headerProjectTitle">Project 1M</span>
+              <span class="px-2 py-0.5 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold shrink-0" id="headerBadgeGoal">1 Juta</span>
+            </div>
+            <div class="flex items-center gap-1 text-[11px] leading-tight text-on-surface-variant font-medium">
+              <span>Terkumpul:</span>
+              <span class="font-bold text-primary truncate" id="headerCollectedDisplay">Rp 650.000</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Action Buttons (Cloud Sync, Tas Harta, Tema, Info) -->
+        <div class="flex items-center gap-1.5 shrink-0">
           <button id="cloudSyncBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-all bg-surface-container/70 hover:bg-surface-container relative shadow-xs" title="Firebase Cloud: Status Sinkronisasi">
             <span class="material-symbols-outlined text-[20px]" id="cloudStatusIcon">cloud_done</span>
             <span id="cloudStatusDot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface animate-pulse"></span>
