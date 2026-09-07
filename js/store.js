@@ -124,6 +124,7 @@ const DEFAULT_ASSETS = [
 
 class StoreManager {
   constructor() {
+    this.userId = null;
     this.STORAGE_KEYS = {
       LEVELS: 'p1m_levels_data_v3',
       DYNAMIC_LEVELS: 'p1m_dynamic_levels_v3',
@@ -139,6 +140,17 @@ class StoreManager {
 
     this.loadData();
     this.initCloudSync();
+  }
+
+  /**
+   * Get user-scoped storage key so each account has dedicated local cache.
+   */
+  getKey(name) {
+    const baseKey = this.STORAGE_KEYS[name];
+    if (this.userId) {
+      return `${baseKey}_${this.userId}`;
+    }
+    return baseKey;
   }
 
   /**
@@ -162,36 +174,77 @@ class StoreManager {
   }
 
   initCloudSync() {
-    // Cloud sync is controlled by the CLOUD_SYNC_ENABLED flag in firebase-config.js.
-    // The FirebaseSync service will only function when enabled AND authenticated.
-    const connect = () => {
-      if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
-        window.FirebaseSync.onAuthReady((uid) => {
-          console.log('[Store] Firebase Auth siap untuk UID:', uid);
-          window.FirebaseSync.listenToCloud((cloudData) => {
-            if (cloudData && (cloudData.levels || cloudData.transactions)) {
-              console.log('[Store] Data cloud ditemukan untuk UID:', uid);
-              this.importCloudData(cloudData);
-            } else {
-              console.log('[Store] Cloud kosong untuk UID ini. Mengunggah data lokal awal ke Firebase...');
-              window.FirebaseSync.saveToCloud(this.exportData(), true);
-            }
-          });
-        });
+    if (typeof window === 'undefined') return;
+
+    // Listen to Firebase Auth state changes
+    window.addEventListener('p1m-auth-state-changed', (e) => {
+      const { isAuthenticated, user } = e.detail || {};
+      if (isAuthenticated && user && user.uid) {
+        this.initUser(user.uid);
+      } else {
+        this.clearUser();
       }
-    };
+    });
+
+    // Check if FirebaseSync already authenticated
+    if (window.FirebaseSync && window.FirebaseSync.userId) {
+      this.initUser(window.FirebaseSync.userId);
+    }
+  }
+
+  /**
+   * Initialize state for a specific logged-in Google user UID.
+   */
+  initUser(uid) {
+    if (!uid) return;
+    this.userId = uid;
+    console.log('[Store] Menginisialisasi data untuk user UID:', uid);
+
+    // 1. Load local cache for this user
+    this.loadData();
+
+    // 2. Attach real-time cloud listener to this user's cloud path
+    if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
+      window.FirebaseSync.listenToCloud((cloudData) => {
+        if (cloudData && (cloudData.levels || cloudData.transactions)) {
+          console.log('[Store] Data cloud ditemukan untuk user:', uid);
+          this.importCloudData(cloudData);
+        } else {
+          console.log('[Store] Cloud user baru masih kosong. Mengunggah data inisial ke cloud...');
+          window.FirebaseSync.saveToCloud(this.exportData(), true);
+        }
+      });
+    }
 
     if (typeof window !== 'undefined') {
-      if (window.FirebaseSync && window.FirebaseSync.enabled) {
-        connect();
-      } else {
-        window.addEventListener('DOMContentLoaded', connect);
-      }
+      window.dispatchEvent(new CustomEvent('p1m-cloud-synced', { detail: { source: 'user_init' } }));
+    }
+  }
+
+  /**
+   * Clear in-memory state on logout so user data is not retained in memory.
+   */
+  clearUser() {
+    console.log('[Store] Mereset store sesi user...');
+    this.userId = null;
+    if (typeof window !== 'undefined' && window.FirebaseSync) {
+      window.FirebaseSync.stopListening();
+    }
+    this.levels = JSON.parse(JSON.stringify(DEFAULT_LEVELS));
+    this.dynamicLevels = [];
+    this.dynamicSideQuests = [];
+    this.assets = JSON.parse(JSON.stringify(DEFAULT_ASSETS));
+    this.transactions = [];
+    this.recalculateApex();
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('p1m-cloud-synced', { detail: { source: 'logout' } }));
     }
   }
 
   exportData() {
     return {
+      userId: this.userId,
       levels: this.levels,
       dynamicLevels: this.dynamicLevels,
       dynamicSideQuests: this.dynamicSideQuests,
@@ -211,32 +264,32 @@ class StoreManager {
           this.levels[k] = JSON.parse(JSON.stringify(DEFAULT_LEVELS[k]));
         }
       });
-      localStorage.setItem(this.STORAGE_KEYS.LEVELS, JSON.stringify(this.levels));
+      localStorage.setItem(this.getKey('LEVELS'), JSON.stringify(this.levels));
     }
 
     if (Array.isArray(cloudData.dynamicLevels)) {
       this.dynamicLevels = cloudData.dynamicLevels;
-      localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
+      localStorage.setItem(this.getKey('DYNAMIC_LEVELS'), JSON.stringify(this.dynamicLevels));
     }
 
     if (Array.isArray(cloudData.dynamicSideQuests)) {
       this.dynamicSideQuests = cloudData.dynamicSideQuests;
-      localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS, JSON.stringify(this.dynamicSideQuests));
+      localStorage.setItem(this.getKey('DYNAMIC_SIDEQUESTS'), JSON.stringify(this.dynamicSideQuests));
     }
 
     if (Array.isArray(cloudData.assets)) {
       this.assets = cloudData.assets;
-      localStorage.setItem(this.STORAGE_KEYS.ASSETS, JSON.stringify(this.assets));
+      localStorage.setItem(this.getKey('ASSETS'), JSON.stringify(this.assets));
     }
 
     if (Array.isArray(cloudData.transactions)) {
       this.transactions = cloudData.transactions;
-      localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
+      localStorage.setItem(this.getKey('TRANSACTIONS'), JSON.stringify(this.transactions));
     }
 
     if (cloudData.apexTarget !== undefined) {
       this.apexTarget = Number(cloudData.apexTarget);
-      localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
+      localStorage.setItem(this.getKey('APEX_TARGET'), this.apexTarget.toString());
     } else {
       this.recalculateApex();
     }
@@ -329,8 +382,24 @@ class StoreManager {
   }
 
   loadData() {
+    // Helper to get stored value with automatic legacy migration for first-time Google login
+    const getStoredValue = (keyName) => {
+      const userKey = this.getKey(keyName);
+      let val = localStorage.getItem(userKey);
+      if (!val && this.userId) {
+        // Check for legacy un-scoped data from prior version
+        const legacyVal = localStorage.getItem(this.STORAGE_KEYS[keyName]);
+        if (legacyVal) {
+          val = legacyVal;
+          localStorage.setItem(userKey, legacyVal);
+          console.log(`[Store] Migrasi data lokal lama '${keyName}' ke akun: ${this.userId}`);
+        }
+      }
+      return val;
+    };
+
     // Load Levels
-    const savedLevels = localStorage.getItem(this.STORAGE_KEYS.LEVELS);
+    const savedLevels = getStoredValue('LEVELS');
     if (savedLevels) {
       try {
         this.levels = JSON.parse(savedLevels);
@@ -347,7 +416,7 @@ class StoreManager {
     }
 
     // Load Dynamic Levels (Endless Expansion)
-    const savedDynamic = localStorage.getItem(this.STORAGE_KEYS.DYNAMIC_LEVELS);
+    const savedDynamic = getStoredValue('DYNAMIC_LEVELS');
     if (savedDynamic) {
       try {
         this.dynamicLevels = JSON.parse(savedDynamic);
@@ -359,7 +428,7 @@ class StoreManager {
     }
 
     // Load Dynamic Side Quests
-    const savedDynSQ = localStorage.getItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS);
+    const savedDynSQ = getStoredValue('DYNAMIC_SIDEQUESTS');
     if (savedDynSQ) {
       try {
         this.dynamicSideQuests = JSON.parse(savedDynSQ);
@@ -371,7 +440,7 @@ class StoreManager {
     }
 
     // Load Assets (Tas Harta)
-    const savedAssets = localStorage.getItem(this.STORAGE_KEYS.ASSETS);
+    const savedAssets = getStoredValue('ASSETS');
     if (savedAssets) {
       try {
         this.assets = JSON.parse(savedAssets);
@@ -383,7 +452,7 @@ class StoreManager {
     }
 
     // Load Transactions Log
-    const savedTx = localStorage.getItem(this.STORAGE_KEYS.TRANSACTIONS);
+    const savedTx = getStoredValue('TRANSACTIONS');
     if (savedTx) {
       try {
         this.transactions = JSON.parse(savedTx);
@@ -428,7 +497,7 @@ class StoreManager {
     }
 
     // Load Apex Target
-    const savedApex = localStorage.getItem(this.STORAGE_KEYS.APEX_TARGET);
+    const savedApex = getStoredValue('APEX_TARGET');
     if (savedApex) {
       this.apexTarget = Number(savedApex);
     } else {
@@ -447,12 +516,12 @@ class StoreManager {
   }
 
   save(skipCloud = false) {
-    localStorage.setItem(this.STORAGE_KEYS.LEVELS, JSON.stringify(this.levels));
-    localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_LEVELS, JSON.stringify(this.dynamicLevels));
-    localStorage.setItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS, JSON.stringify(this.dynamicSideQuests));
-    localStorage.setItem(this.STORAGE_KEYS.ASSETS, JSON.stringify(this.assets));
-    localStorage.setItem(this.STORAGE_KEYS.TRANSACTIONS, JSON.stringify(this.transactions));
-    localStorage.setItem(this.STORAGE_KEYS.APEX_TARGET, this.apexTarget.toString());
+    localStorage.setItem(this.getKey('LEVELS'), JSON.stringify(this.levels));
+    localStorage.setItem(this.getKey('DYNAMIC_LEVELS'), JSON.stringify(this.dynamicLevels));
+    localStorage.setItem(this.getKey('DYNAMIC_SIDEQUESTS'), JSON.stringify(this.dynamicSideQuests));
+    localStorage.setItem(this.getKey('ASSETS'), JSON.stringify(this.assets));
+    localStorage.setItem(this.getKey('TRANSACTIONS'), JSON.stringify(this.transactions));
+    localStorage.setItem(this.getKey('APEX_TARGET'), this.apexTarget.toString());
 
     if (!skipCloud && typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
       window.FirebaseSync.saveToCloud(this.exportData());
@@ -840,12 +909,12 @@ class StoreManager {
   }
 
   resetAll() {
-    localStorage.removeItem(this.STORAGE_KEYS.LEVELS);
-    localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_LEVELS);
-    localStorage.removeItem(this.STORAGE_KEYS.DYNAMIC_SIDEQUESTS);
-    localStorage.removeItem(this.STORAGE_KEYS.ASSETS);
-    localStorage.removeItem(this.STORAGE_KEYS.TRANSACTIONS);
-    localStorage.removeItem(this.STORAGE_KEYS.APEX_TARGET);
+    localStorage.removeItem(this.getKey('LEVELS'));
+    localStorage.removeItem(this.getKey('DYNAMIC_LEVELS'));
+    localStorage.removeItem(this.getKey('DYNAMIC_SIDEQUESTS'));
+    localStorage.removeItem(this.getKey('ASSETS'));
+    localStorage.removeItem(this.getKey('TRANSACTIONS'));
+    localStorage.removeItem(this.getKey('APEX_TARGET'));
     this.loadData();
     if (typeof window !== 'undefined' && window.FirebaseSync && window.FirebaseSync.enabled) {
       window.FirebaseSync.saveToCloud(this.exportData(), true);

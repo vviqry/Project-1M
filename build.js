@@ -10,7 +10,7 @@ if (fs.existsSync(dist)) {
 fs.mkdirSync(dist, { recursive: true });
 
 // Copy root files
-const rootFiles = ['index.html', 'manifest.json', 'sw.js'];
+const rootFiles = ['index.html', 'manifest.json', 'sw.js', 'database.rules.json', 'firestore.rules'];
 for (const file of rootFiles) {
   if (fs.existsSync(file)) {
     fs.copyFileSync(file, path.join(dist, file));

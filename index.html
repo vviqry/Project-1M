@@ -99,8 +99,106 @@
     </div>
   </div>
 
+  <!-- =========================================================================
+       INITIAL AUTH / SPLASH LOADING SCREEN
+       ========================================================================= -->
+  <div id="appLoadingScreen" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-surface transition-opacity duration-300">
+    <div class="flex flex-col items-center gap-4 text-center px-6">
+      <div class="relative flex items-center justify-center">
+        <div class="w-16 h-16 rounded-full bg-secondary-container/40 animate-ping absolute"></div>
+        <div class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-xl relative z-10 border-2 border-secondary/40">
+          <span class="material-symbols-outlined text-[32px]">military_tech</span>
+        </div>
+      </div>
+      <div class="space-y-1">
+        <h2 class="font-headline-sm text-xl font-bold text-primary">Project 1M</h2>
+        <p class="font-body-sm text-xs text-on-surface-variant flex items-center justify-center gap-1.5">
+          <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span>Menghubungkan ke Google Auth...</span>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================================================
+       LOGIN GATE SCREEN (Tampil jika user belum login dengan Google)
+       ========================================================================= -->
+  <section id="loginScreen" class="w-full max-w-[448px] min-h-screen px-5 py-8 flex flex-col justify-between items-center text-center hidden">
+    <!-- Top Branding -->
+    <div class="w-full flex flex-col items-center pt-6 space-y-3">
+      <div class="relative flex items-center justify-center">
+        <div class="absolute -inset-3 bg-secondary-container/30 rounded-full blur-xl animate-pulse pointer-events-none"></div>
+        <div class="w-20 h-20 rounded-full bg-primary flex items-center justify-center text-on-primary shadow-xl relative z-10 border-2 border-secondary/40">
+          <span class="material-symbols-outlined text-[40px]" style="font-variation-settings: 'FILL' 1;">military_tech</span>
+        </div>
+      </div>
+
+      <div class="space-y-1">
+        <div class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-secondary-container text-on-secondary-container font-label-sm text-[10px] font-bold shadow-xs">
+          <span>⚔️</span> Ekspedisi Finansial Gamifikasi
+        </div>
+        <h1 class="font-headline-sm text-2xl font-bold text-primary">Project 1M</h1>
+        <p class="font-body-sm text-xs text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
+          Peta petualangan meraih milestone tabungan Rp 1.000.000 pertama dan ekspansi level tanpa batas.
+        </p>
+      </div>
+    </div>
+
+    <!-- Login Card -->
+    <div class="w-full my-6 p-5 rounded-3xl bg-surface-container border border-outline-variant/60 shadow-lg space-y-4 text-left">
+      <div class="space-y-1 text-center">
+        <h2 class="font-title-md text-sm font-bold text-on-surface">Masuk untuk Memulai Petualangan</h2>
+        <p class="font-body-sm text-[11.5px] text-on-surface-variant leading-relaxed">
+          Gunakan akun Google Anda agar progres level, tabungan harian, dan aset mesin uang tersimpan aman dan terisolasi.
+        </p>
+      </div>
+
+      <!-- Google Sign-In Button -->
+      <div class="space-y-2 pt-1">
+        <button id="loginWithGoogleBtn" type="button" class="w-full h-12 rounded-2xl bg-surface-container-lowest hover:bg-surface-container-low border border-outline-variant/70 hover:border-primary text-on-surface font-title-md text-xs font-bold flex items-center justify-center gap-3 shadow-sm hover:shadow active:scale-[0.98] transition-all group">
+          <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+          <span id="loginWithGoogleBtnText" class="tracking-wide">Lanjutkan dengan Google</span>
+          <span id="loginWithGoogleSpinner" class="material-symbols-outlined text-[18px] animate-spin text-primary hidden">progress_activity</span>
+        </button>
+
+        <div id="loginErrorAlert" class="hidden p-2.5 rounded-xl bg-error-container/20 border border-error/30 text-error text-[11px] leading-tight flex items-start gap-2">
+          <span class="material-symbols-outlined text-[16px] shrink-0 mt-0.5">error</span>
+          <span id="loginErrorMessage">Gagal login dengan Google. Silakan coba lagi.</span>
+        </div>
+      </div>
+
+      <!-- Feature Badges -->
+      <div class="pt-2 border-t border-outline-variant/30 space-y-2 text-[11px]">
+        <div class="flex items-start gap-2.5 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px] text-emerald-600 shrink-0 mt-0.5">lock</span>
+          <p><strong class="text-on-surface">Data Aman &amp; Privat:</strong> Setiap user memiliki database terisolasi melalui Firebase Security Rules.</p>
+        </div>
+        <div class="flex items-start gap-2.5 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px] text-secondary shrink-0 mt-0.5">sync</span>
+          <p><strong class="text-on-surface">Auto-Sync PC ⇄ HP:</strong> Cukup masuk dengan akun Google yang sama di HP dan PC.</p>
+        </div>
+        <div class="flex items-start gap-2.5 text-on-surface-variant">
+          <span class="material-symbols-outlined text-[16px] text-primary shrink-0 mt-0.5">cloud_done</span>
+          <p><strong class="text-on-surface">Cloud Realtime Persistence:</strong> Progres tabungan Anda tidak akan hilang saat berganti perangkat.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Footer -->
+    <div class="w-full pb-4 text-center space-y-1">
+      <p class="font-label-sm text-[10.5px] text-on-surface-variant/80">
+        Project 1M Quest Tracker • PWA Didukung Google Identity &amp; Firebase
+      </p>
+    </div>
+  </section>
+
   <!-- PWA Container -->
-  <div class="app-container">
+  <div class="app-container hidden" id="appContainer">
     
     <!-- Top Header HUD -->
     <header class="fixed top-0 w-full max-w-[448px] z-40 bg-surface/90 backdrop-blur-xl border-b border-outline-variant/40 shadow-[0_1px_8px_rgba(0,0,0,0.03)] pt-safe">
@@ -123,8 +221,15 @@
           </div>
         </div>
 
-        <!-- Right: Action Buttons (Cloud Sync, Tas Harta, Tema, Info) -->
+        <!-- Right: Action Buttons (User Profile, Cloud Sync, Tas Harta, Tema, Info) -->
         <div class="flex items-center gap-1.5">
+          <!-- User Profile Chip / Button -->
+          <button id="userProfileBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center bg-surface-container/80 hover:bg-surface-container text-on-surface-variant overflow-hidden border border-outline-variant/50 shadow-xs active:scale-95 transition-all relative group" title="Profil Akun Google & Sinkronisasi">
+            <img id="headerUserAvatar" src="" alt="User" class="w-full h-full object-cover hidden"/>
+            <span id="headerUserInitials" class="font-title-md text-xs font-bold text-primary">P1M</span>
+            <span id="headerUserOnlineDot" class="absolute top-0.5 right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface"></span>
+          </button>
+
           <button id="cloudSyncBtn" type="button" class="w-10 h-10 rounded-full flex items-center justify-center text-on-surface-variant hover:text-primary active:scale-95 transition-all bg-surface-container/70 hover:bg-surface-container relative shadow-xs" title="Firebase Cloud: Status Sinkronisasi">
             <span class="material-symbols-outlined text-[20px]" id="cloudStatusIcon">cloud_done</span>
             <span id="cloudStatusDot" class="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-surface animate-pulse"></span>
@@ -830,6 +935,29 @@
         </button>
       </div>
 
+      <!-- Google User Profile Card -->
+      <div id="modalUserProfileCard" class="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-3">
+        <div class="flex items-center gap-3">
+          <div class="w-12 h-12 rounded-full bg-surface-container-highest overflow-hidden border border-outline-variant/50 shrink-0 flex items-center justify-center shadow-xs">
+            <img id="syncModalUserAvatar" src="" alt="Avatar" class="w-full h-full object-cover hidden"/>
+            <span id="syncModalUserInitials" class="font-title-md text-sm font-bold text-primary">P1M</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-1.5">
+              <h4 id="syncModalUserName" class="font-title-md text-xs font-bold text-on-surface truncate">Memuat akun...</h4>
+              <span class="px-1.5 py-0.5 rounded-full bg-secondary-container text-on-secondary-container text-[9px] font-bold shrink-0">Google</span>
+            </div>
+            <p id="syncModalUserEmail" class="font-body-sm text-[11px] text-on-surface-variant truncate">-</p>
+          </div>
+        </div>
+
+        <!-- Tombol Logout -->
+        <button id="logoutBtn" type="button" class="w-full h-10 rounded-xl bg-error-container/20 hover:bg-error-container/40 text-error font-title-md text-xs font-bold flex items-center justify-center gap-1.5 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-[16px]">logout</span>
+          Keluar dari Akun Google
+        </button>
+      </div>
+
       <!-- Status Cloud Card -->
       <div class="p-3 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-2">
         <div class="flex items-center justify-between">
@@ -843,7 +971,7 @@
         </div>
         <div class="text-[11px] text-on-surface-variant flex items-center justify-between bg-surface-container-lowest p-2 rounded-xl border border-outline-variant/40">
           <div class="truncate mr-2">
-            <span class="text-[10px] text-on-surface-variant/70 block">User ID (UID):</span>
+            <span class="text-[10px] text-on-surface-variant/70 block">User ID (UID Akun):</span>
             <span id="syncModalUidDisplay" class="font-mono text-[10.5px] text-on-surface font-semibold select-all">Memuat...</span>
           </div>
           <button id="copyUidBtn" type="button" class="px-2.5 py-1 rounded-lg bg-surface-container hover:bg-surface-container-high text-[10px] font-bold text-primary flex items-center gap-1 shrink-0 active:scale-95 transition-all">
@@ -856,10 +984,10 @@
       <div class="p-3.5 rounded-2xl bg-surface-container border border-outline-variant/50 space-y-3">
         <div class="flex items-center gap-2">
           <span class="material-symbols-outlined text-[18px] text-secondary">phonelink</span>
-          <h4 class="font-title-md text-xs font-bold text-on-surface">Hubungkan Perangkat (PC ⇄ HP)</h4>
+          <h4 class="font-title-md text-xs font-bold text-on-surface">Sinkronisasi Otomatis PC ⇄ HP</h4>
         </div>
         <p class="font-body-sm text-[11px] text-on-surface-variant leading-relaxed">
-          Gunakan kunci sinkronisasi untuk memindahkan atau menyamakan data antara PC dan HP Anda.
+          ✨ Berkat Google Sign-In, data quest Anda kini otomatis tersinkron di semua browser &amp; perangkat (PC &amp; HP) yang login menggunakan akun Google yang sama.
         </p>
 
         <!-- Ekspor Kunci (di PC) -->

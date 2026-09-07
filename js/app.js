@@ -119,6 +119,9 @@
     }
 
     init() {
+      // 0. Setup Authentication & Gate UI
+      this.initAuthUI();
+
       // 1. Initialize Theme Engine
       window.ThemeEngine.init();
 
@@ -186,6 +189,182 @@
       }
     }
 
+    closeAllModals() {
+      const modalBackdrops = [
+        'universalSheetBackdrop',
+        'editLevelModalBackdrop',
+        'addLevelModalBackdrop',
+        'tasHartaBackdrop',
+        'cloudSyncModalBackdrop',
+        'infoModalBackdrop'
+      ];
+      modalBackdrops.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.classList.remove('active');
+      });
+      document.body.style.overflow = '';
+    }
+
+    initAuthUI() {
+      const loginScreen = document.getElementById('loginScreen');
+      const appContainer = document.getElementById('appContainer');
+      const loadingScreen = document.getElementById('appLoadingScreen');
+      const loginWithGoogleBtn = document.getElementById('loginWithGoogleBtn');
+      const loginBtnText = document.getElementById('loginWithGoogleBtnText');
+      const loginSpinner = document.getElementById('loginWithGoogleSpinner');
+      const loginErrorAlert = document.getElementById('loginErrorAlert');
+      const loginErrorMessage = document.getElementById('loginErrorMessage');
+      const logoutBtn = document.getElementById('logoutBtn');
+      const userProfileBtn = document.getElementById('userProfileBtn');
+
+      const hideLoading = () => {
+        if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+          loadingScreen.classList.add('opacity-0', 'pointer-events-none');
+          setTimeout(() => {
+            loadingScreen.classList.add('hidden');
+          }, 300);
+        }
+      };
+
+      const setLoginLoading = (isLoading) => {
+        if (!loginWithGoogleBtn) return;
+        loginWithGoogleBtn.disabled = isLoading;
+        if (isLoading) {
+          if (loginBtnText) loginBtnText.textContent = 'Menghubungkan Google...';
+          if (loginSpinner) loginSpinner.classList.remove('hidden');
+          if (loginErrorAlert) loginErrorAlert.classList.add('hidden');
+        } else {
+          if (loginBtnText) loginBtnText.textContent = 'Lanjutkan dengan Google';
+          if (loginSpinner) loginSpinner.classList.add('hidden');
+        }
+      };
+
+      const updateAuthStateUI = (user) => {
+        hideLoading();
+
+        if (user && user.uid) {
+          // User is authenticated -> show app, hide login screen
+          if (loginScreen) loginScreen.classList.add('hidden');
+          if (appContainer) appContainer.classList.remove('hidden');
+
+          // Update header profile display
+          const headerAvatar = document.getElementById('headerUserAvatar');
+          const headerInitials = document.getElementById('headerUserInitials');
+          const modalAvatar = document.getElementById('syncModalUserAvatar');
+          const modalInitials = document.getElementById('syncModalUserInitials');
+          const modalName = document.getElementById('syncModalUserName');
+          const modalEmail = document.getElementById('syncModalUserEmail');
+          const modalUid = document.getElementById('syncModalUidDisplay');
+
+          const displayName = user.displayName || 'Penjelajah 1M';
+          const initials = displayName.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase() || 'P1M';
+
+          if (user.photoURL) {
+            if (headerAvatar) {
+              headerAvatar.src = user.photoURL;
+              headerAvatar.classList.remove('hidden');
+            }
+            if (headerInitials) headerInitials.classList.add('hidden');
+            if (modalAvatar) {
+              modalAvatar.src = user.photoURL;
+              modalAvatar.classList.remove('hidden');
+            }
+            if (modalInitials) modalInitials.classList.add('hidden');
+          } else {
+            if (headerAvatar) headerAvatar.classList.add('hidden');
+            if (headerInitials) {
+              headerInitials.textContent = initials;
+              headerInitials.classList.remove('hidden');
+            }
+            if (modalAvatar) modalAvatar.classList.add('hidden');
+            if (modalInitials) {
+              modalInitials.textContent = initials;
+              modalInitials.classList.remove('hidden');
+            }
+          }
+
+          if (modalName) modalName.textContent = displayName;
+          if (modalEmail) modalEmail.textContent = user.email || '-';
+          if (modalUid) modalUid.textContent = user.uid;
+
+          if (userProfileBtn) {
+            userProfileBtn.title = `Akun: ${displayName} (${user.email || user.uid})`;
+          }
+
+          this.refreshAll();
+        } else {
+          // User is NOT authenticated -> show login screen, hide main app
+          if (loginScreen) loginScreen.classList.remove('hidden');
+          if (appContainer) appContainer.classList.add('hidden');
+
+          this.closeAllModals();
+        }
+      };
+
+      // Listen for global auth state change
+      window.addEventListener('p1m-auth-state-changed', (e) => {
+        const { user } = e.detail || {};
+        updateAuthStateUI(user);
+      });
+
+      // Immediate check if FirebaseSync is already ready
+      if (window.FirebaseSync && window.FirebaseSync.isAuthReady) {
+        updateAuthStateUI(window.FirebaseSync.currentUser);
+      } else {
+        // Fallback safety timeout (4s) so loading splash never gets stuck
+        setTimeout(() => {
+          if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
+            hideLoading();
+            if (window.FirebaseSync && window.FirebaseSync.currentUser) {
+              updateAuthStateUI(window.FirebaseSync.currentUser);
+            } else {
+              updateAuthStateUI(null);
+            }
+          }
+        }, 4000);
+      }
+
+      // Handle Login with Google button
+      if (loginWithGoogleBtn) {
+        loginWithGoogleBtn.addEventListener('click', async () => {
+          setLoginLoading(true);
+          try {
+            await window.FirebaseSync.signInWithGoogle();
+            showToast('Berhasil login dengan Google!', 'check_circle');
+          } catch (err) {
+            console.error('[App] Login error:', err);
+            setLoginLoading(false);
+            if (loginErrorAlert && loginErrorMessage) {
+              loginErrorMessage.textContent = err.message || 'Gagal login dengan Google.';
+              loginErrorAlert.classList.remove('hidden');
+            }
+            showToast(err.message || 'Gagal login', 'error');
+          }
+        });
+      }
+
+      // Handle Logout button
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          try {
+            this.closeCloudSyncModal();
+            await window.FirebaseSync.signOut();
+            showToast('Berhasil keluar dari akun.', 'logout');
+          } catch (err) {
+            console.error('[App] Logout error:', err);
+            showToast('Gagal logout', 'error');
+          }
+        });
+      }
+
+      // Handle User Profile button in Header HUD
+      if (userProfileBtn) {
+        userProfileBtn.addEventListener('click', () => {
+          this.openCloudSyncModal();
+        });
+      }
+    }
+
     initCloudSyncUI() {
       const btn = document.getElementById('cloudSyncBtn');
       const icon = document.getElementById('cloudStatusIcon');
@@ -208,7 +387,7 @@
         const uidEl = document.getElementById('syncModalUidDisplay');
 
         if (uidEl && window.FirebaseSync) {
-          uidEl.textContent = window.FirebaseSync.userId || 'Menunggu autentikasi...';
+          uidEl.textContent = window.FirebaseSync.userId || 'Belum login';
         }
 
         if (!icon || !dot) return;
@@ -251,6 +430,16 @@
           if (modalBadge) {
             modalBadge.className = 'px-2 py-0.5 rounded-full bg-rose-500/15 text-rose-600 font-label-sm text-[10px] font-bold';
             modalBadge.textContent = 'Koneksi Terputus';
+          }
+        } else if (status === 'unauthenticated') {
+          icon.textContent = 'account_circle';
+          icon.className = 'material-symbols-outlined text-[20px] text-zinc-400';
+          dot.className = 'absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-zinc-400 ring-2 ring-surface';
+          btn.title = 'Firebase Auth: Belum Login';
+          if (modalDot) modalDot.className = 'w-2.5 h-2.5 rounded-full bg-zinc-400 inline-block';
+          if (modalBadge) {
+            modalBadge.className = 'px-2 py-0.5 rounded-full bg-zinc-500/15 text-zinc-500 font-label-sm text-[10px] font-bold';
+            modalBadge.textContent = 'Belum Login';
           }
         }
       };
